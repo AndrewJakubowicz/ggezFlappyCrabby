@@ -20,6 +20,7 @@ pub struct Entity {
     pub sprite: Option<Sprite>,
     pub position: Point2<f32>,
     pub is_player: bool,
+    can_jump: bool,
     physics: Option<Physics>,
 }
 
@@ -32,6 +33,7 @@ impl Entity {
             position: Point2::new(0.0, 0.0),
             is_player: false,
             physics: None,
+            can_jump: true,
         }
     }
     pub fn add_physics(mut self, with_gravity: bool) -> Self {
@@ -56,15 +58,19 @@ impl Entity {
             };
         }
 
-        if self.is_player {
+        if self.is_player && self.physics.is_some() {
             use ggez::event::KeyCode;
             use ggez::input::keyboard;
+            if !keyboard::pressed_keys(ctx).contains(&KeyCode::Space) && !self.can_jump {
+                self.can_jump = true;
+            }
 
-            if keyboard::is_key_pressed(ctx, KeyCode::Space) {
+            if keyboard::is_key_pressed(ctx, KeyCode::Space) && self.can_jump {
                 if let Some(physics) = &mut self.physics {
                     physics.acc = Vector2::new(0.0, -GRAVITY);
                     physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
                 }
+                self.can_jump = false;
             }
         }
 
@@ -76,17 +82,12 @@ impl Entity {
             self.position += physics.vel;
         }
 
-        if let Some(s) = &mut self.sprite {
-            if let Some(physics) = &self.physics {
-                s.set_position(self.position);
-            }
-        }
         Ok(())
     }
 
     pub fn draw(&mut self, _ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
         if let Some(s) = &mut self.sprite {
-            s.add_draw_param(batch);
+            s.add_draw_param(self.position.clone(), batch);
         }
         Ok(())
     }

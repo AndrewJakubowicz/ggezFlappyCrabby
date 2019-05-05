@@ -72,28 +72,20 @@ impl Atlas {
 pub struct Sprite {
     /// The square that we want to cut out of the texture atlas.
     rect: graphics::Rect,
-    position: Point2<f32>,
 }
 
 impl Sprite {
     pub fn new(rect: graphics::Rect) -> Self {
-        Self {
-            rect,
-            position: Point2::new(0.0, 0.0),
-        }
+        Self { rect }
     }
 
     /// Adds a draw command to the sprite batch.
-    pub fn add_draw_param(&mut self, sprite_batch: &mut SpriteBatch) {
+    pub fn add_draw_param(&mut self, pos: Point2<f32>, sprite_batch: &mut SpriteBatch) {
         let p = graphics::DrawParam::new()
             .src(self.rect.clone())
             .scale(Vector2::new(4.0, 4.0))
-            .dest(self.position);
+            .dest(pos);
 
         sprite_batch.add(p);
-    }
-
-    pub fn set_position(&mut self, point: Point2<f32>) {
-        self.position = point;
     }
 }
