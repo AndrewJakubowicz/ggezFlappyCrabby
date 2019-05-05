@@ -2,7 +2,7 @@ use ggez::nalgebra::{Point2, Vector2};
 use ggez::{
     conf::Conf,
     event::EventHandler,
-    graphics::{Drawable, Text, spritebatch::SpriteBatch},
+    graphics::{spritebatch::SpriteBatch, Drawable, Text},
     *,
 };
 mod entity;
@@ -16,7 +16,7 @@ struct GameState {
     /// Drawn in order.
     entities: Vec<Entity>,
     /// The sprite batch of all the images
-    spritebatch: SpriteBatch
+    spritebatch: SpriteBatch,
 }
 
 impl GameState {
@@ -25,7 +25,7 @@ impl GameState {
     fn new(spritebatch: SpriteBatch) -> Self {
         Self {
             entities: vec![],
-            spritebatch
+            spritebatch,
         }
     }
 }
@@ -45,7 +45,6 @@ impl EventHandler for GameState {
         }
 
         let p = graphics::DrawParam::new()
-            .scale(Vector2::new(4.0, 4.0))
             .dest(Point2::new(0.0, 0.0))
             .color(graphics::WHITE);
         {
@@ -86,8 +85,9 @@ fn main() {
         atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
     let crab0 = sprites.create_sprite("crab0.png");
 
-    let mut player = entity::Entity::new();
+    let mut player = entity::Entity::new().add_physics(true);
     player.sprite = Some(crab0);
+    player.is_player = true;
 
     state.entities = vec![player];
 

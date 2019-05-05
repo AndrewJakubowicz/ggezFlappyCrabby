@@ -1,5 +1,5 @@
 use ggez::graphics::{self, spritebatch::SpriteBatch};
-use ggez::nalgebra::Point2;
+use ggez::nalgebra::{Point2, Vector2};
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
 use std::cell::RefCell;
@@ -56,15 +56,13 @@ impl Atlas {
         let atlas_rect = graphics::Rect::new(0.0, 0.0, width, height);
 
         if let Some(sprite_data) = self.frames.iter().find(|d| d.filename == sprite_name) {
-            Sprite::new(
-                graphics::Rect::fraction(
-                    sprite_data.frame.x as f32,
-                    sprite_data.frame.y as f32,
-                    sprite_data.frame.w as f32,
-                    sprite_data.frame.h as f32,
-                    &atlas_rect,
-                ),
-            )
+            Sprite::new(graphics::Rect::fraction(
+                sprite_data.frame.x as f32,
+                sprite_data.frame.y as f32,
+                sprite_data.frame.w as f32,
+                sprite_data.frame.h as f32,
+                &atlas_rect,
+            ))
         } else {
             unimplemented!("Not handling failure to find sprite");
         }
@@ -85,14 +83,14 @@ impl Sprite {
         }
     }
 
-		/// Adds a draw command to the sprite batch.
+    /// Adds a draw command to the sprite batch.
     pub fn add_draw_param(&mut self, sprite_batch: &mut SpriteBatch) {
         let p = graphics::DrawParam::new()
             .src(self.rect.clone())
+            .scale(Vector2::new(4.0, 4.0))
             .dest(self.position);
 
         sprite_batch.add(p);
-        
     }
 
     pub fn set_position(&mut self, point: Point2<f32>) {

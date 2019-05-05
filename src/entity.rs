@@ -1,30 +1,85 @@
-use crate::atlas::{Sprite};
+use crate::atlas::Sprite;
 use ggez::event::EventHandler;
-use ggez::graphics::Image;
 use ggez::graphics::spritebatch::SpriteBatch;
-use ggez::nalgebra::Point2;
+use ggez::graphics::Image;
+use ggez::nalgebra::{Point2, Vector2};
 use ggez::Context;
 use ggez::GameResult;
+
+const GRAVITY: f32 = 0.6;
+const JUMP_IMPULSE: f32 = 8.0;
+
+/// The physics on the entity.
+struct Physics {
+    vel: Vector2<f32>,
+    acc: Vector2<f32>,
+    gravity: bool,
+}
+
 pub struct Entity {
     pub sprite: Option<Sprite>,
+    pub position: Point2<f32>,
+    pub is_player: bool,
+    physics: Option<Physics>,
 }
 
 /// Everything that can be interacted with is an entity.
 /// The player is an entity, as well as the pipes.
 impl Entity {
     pub fn new() -> Self {
-        Self { sprite: None }
+        Self {
+            sprite: None,
+            position: Point2::new(0.0, 0.0),
+            is_player: false,
+            physics: None,
+        }
+    }
+    pub fn add_physics(mut self, with_gravity: bool) -> Self {
+        self.physics = Some(Physics {
+            vel: Vector2::new(0.0, 0.0),
+            acc: Vector2::new(0.0, 0.0),
+            gravity: with_gravity,
+        });
+        self
     }
 }
 
 impl Entity {
     pub fn update(&mut self, ctx: &mut Context) -> GameResult {
-        let time = ggez::timer::time_since_start(ctx).as_millis();
+        let delta = ggez::timer::delta(ctx).as_nanos() as f32;
+
+        if let Some(physics) = &mut self.physics {
+            physics.acc = if physics.gravity {
+                Vector2::new(0.0, GRAVITY)
+            } else {
+                Vector2::new(0.0, 0.0)
+            };
+        }
+
+        if self.is_player {
+            use ggez::event::KeyCode;
+            use ggez::input::keyboard;
+
+            if keyboard::is_key_pressed(ctx, KeyCode::Space) {
+                if let Some(physics) = &mut self.physics {
+                    physics.acc = Vector2::new(0.0, -GRAVITY);
+                    physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
+                }
+            }
+        }
+
+        if let Some(physics) = &mut self.physics {
+            physics.acc.scale(1.0 / delta);
+
+            physics.vel += physics.acc;
+            physics.vel.scale(1.0 / delta);
+            self.position += physics.vel;
+        }
+
         if let Some(s) = &mut self.sprite {
-            s.set_position(Point2::new(
-                ((time as f64 / 1_000.0).sin() * 30.0 + 90.0) as f32,
-                ((time as f64 / 1_100.0).sin() * 50.0 + 60.0) as f32,
-            ));
+            if let Some(physics) = &self.physics {
+                s.set_position(self.position);
+            }
         }
         Ok(())
     }
