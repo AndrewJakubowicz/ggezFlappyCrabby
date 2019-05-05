@@ -1,0 +1,57 @@
+{"frames": [
+
+{
+	"filename": "crab0.png",
+	"frame": {"x":0,"y":0,"w":16,"h":14},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":16,"h":14},
+	"sourceSize": {"w":16,"h":14},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "crab1.png",
+	"frame": {"x":0,"y":14,"w":16,"h":14},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":16,"h":14},
+	"sourceSize": {"w":16,"h":14},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "floor_tile.png",
+	"frame": {"x":0,"y":28,"w":16,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":16,"h":8},
+	"sourceSize": {"w":16,"h":8},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "pipe_bottom.png",
+	"frame": {"x":0,"y":36,"w":16,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
+	"sourceSize": {"w":16,"h":16},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "pipe_top.png",
+	"frame": {"x":0,"y":52,"w":16,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
+	"sourceSize": {"w":16,"h":16},
+	"pivot": {"x":0.5,"y":0.5}
+}],
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "texture_atlas.png",
+	"format": "RGBA8888",
+	"size": {"w":16,"h":68},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:5275b17b48c4ad3181c8cf898c05a533:afd9633a0f82fc6de471cdf1e1834464:67087b54f7aa7c7f6411022b7ef8a190$"
+}
+}
