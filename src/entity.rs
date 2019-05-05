@@ -1,13 +1,16 @@
 use crate::atlas::Sprite;
 use ggez::event::EventHandler;
+use ggez::graphics;
 use ggez::graphics::spritebatch::SpriteBatch;
 use ggez::graphics::Image;
 use ggez::nalgebra::{Point2, Vector2};
 use ggez::Context;
 use ggez::GameResult;
 
-const GRAVITY: f32 = 0.6;
-const JUMP_IMPULSE: f32 = 8.0;
+const DEBUG: bool = true;
+
+const GRAVITY: f32 = 0.25;
+const JUMP_IMPULSE: f32 = 3.3;
 
 /// The physics on the entity.
 struct Physics {
@@ -16,12 +19,17 @@ struct Physics {
     gravity: bool,
 }
 
+struct Scroll {
+    jump_distance: f32,
+}
+
 pub struct Entity {
     pub sprite: Option<Sprite>,
     pub position: Point2<f32>,
     pub is_player: bool,
     can_jump: bool,
     physics: Option<Physics>,
+    scroller: Option<Scroll>,
 }
 
 /// Everything that can be interacted with is an entity.
@@ -34,6 +42,7 @@ impl Entity {
             is_player: false,
             physics: None,
             can_jump: true,
+            scroller: None,
         }
     }
     pub fn add_physics(mut self, with_gravity: bool) -> Self {
@@ -42,6 +51,20 @@ impl Entity {
             acc: Vector2::new(0.0, 0.0),
             gravity: with_gravity,
         });
+        self
+    }
+
+    pub fn scroller(mut self, dist: f32) -> Self {
+        self.scroller = Some(Scroll {
+            jump_distance: dist,
+        });
+        self
+    }
+
+    pub fn set_velocity(mut self, vel: Vector2<f32>) -> Self {
+        if let Some(p) = &mut self.physics {
+            p.vel = vel;
+        }
         self
     }
 }
@@ -80,14 +103,33 @@ impl Entity {
             physics.vel += physics.acc;
             physics.vel.scale(1.0 / delta);
             self.position += physics.vel;
+
+            // prevent falling off the left side of the screen.
+            if let Some(scroll) = &self.scroller {
+                if let Some(sprite) = &self.sprite {
+                    let right_pos = sprite.width + self.position.x;
+                    if right_pos < 0.0 {
+                        self.position.x += scroll.jump_distance;
+                    }
+                }
+            }
         }
 
         Ok(())
     }
 
-    pub fn draw(&mut self, _ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
+    pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
         if let Some(s) = &mut self.sprite {
             s.add_draw_param(self.position.clone(), batch);
+            if DEBUG {
+                let mesh = graphics::Mesh::new_rectangle(
+                    ctx,
+                    graphics::DrawMode::stroke(1.0),
+                    s.aabb(),
+                    graphics::BLACK,
+                )?;
+                graphics::draw(ctx, &mesh, s.draw_params(self.position.clone()))?;
+            }
         }
         Ok(())
     }
