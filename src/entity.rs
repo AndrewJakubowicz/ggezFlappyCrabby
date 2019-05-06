@@ -65,6 +65,14 @@ impl Entity {
         self
     }
 
+    // Panics if there isn't a sprite.
+    pub fn get_bounds(&self) -> graphics::Rect {
+        match &self.sprite {
+            Some(sprite) => sprite.aabb(),
+            None => unimplemented!("This is not implemented"),
+        }
+    }
+
     pub fn scroller(mut self, dist: f32) -> Self {
         self.scroller = Some(Scroll {
             jump_distance: dist,
@@ -161,13 +169,17 @@ impl Entity {
         if let Some(s) = &mut self.sprite {
             s.add_draw_param(self.position.clone(), batch);
             if DEBUG {
+                let mut rect = s.aabb();
                 let mesh = graphics::Mesh::new_rectangle(
                     ctx,
                     graphics::DrawMode::stroke(1.0),
-                    s.aabb(),
+                    rect,
                     graphics::BLACK,
                 )?;
-                graphics::draw(ctx, &mesh, s.draw_params(self.position.clone()))?;
+                let p = graphics::DrawParam::new()
+                    .dest(self.position.clone() * 4.0)
+                    .scale(Vector2::new(4.0, 4.0));
+                graphics::draw(ctx, &mesh, p)?;
             }
         }
         Ok(())

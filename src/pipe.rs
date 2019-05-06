@@ -116,7 +116,6 @@ pub fn create_pipes(
         .into_iter()
         .flat_map(|i| {
             let top = pipe_tracker.init_get_pipe_top();
-            println!("REAL FIRST POS: {:?}", top);
             let mut bottom = create_pipe_bottom(
                 sprite_base.clone(),
                 sprite_top.clone(),

@@ -76,7 +76,7 @@ impl Atlas {
 #[derive(Clone, Debug)]
 pub struct Sprite {
     /// The square that we want to cut out of the texture atlas.
-    rect: graphics::Rect,
+    pub rect: graphics::Rect,
     pub scale: Vector2<f32>,
     pub width: f32,
     pub height: f32,
@@ -107,6 +107,7 @@ impl Sprite {
     /// Returns the bounding box for this sprite.
     pub fn aabb(&self) -> graphics::Rect {
         let mut r = graphics::Rect::new(0.0, 0.0, self.width, self.height);
+        r.scale(self.scale.x, self.scale.y);
         r
     }
 }

@@ -48,7 +48,24 @@ impl EventHandler for GameState {
                 break;
             }
         }
-        /// TODO: Another loop to check if player is dead.
+        // TODO: Another loop to check if player is dead.
+        {
+            if let Some((player, other)) = self.entities.split_last_mut() {
+                // Check player against others.
+                let mut player_rect = player.get_bounds();
+                player_rect.move_to(player.position.clone());
+                for i in 0..other.len() {
+                    if other[i].sprite.is_none() {
+                        continue;
+                    }
+                    let mut other_rect = other[i].get_bounds();
+                    other_rect.move_to(other[i].position.clone());
+                    if other_rect.overlaps(&player_rect) {
+                        println!("{:?} - {:?}", player_rect, other_rect);
+                    }
+                }
+            }
+        }
         Ok(())
     }
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
