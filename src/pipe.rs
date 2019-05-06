@@ -3,16 +3,65 @@ use crate::Sprite;
 use ggez::nalgebra::{Point2, Vector2};
 use std::collections::VecDeque;
 
-const NUM_PIPES: u8 = 4;
-const SEGMENTS: u8 = 4;
+const NUM_PIPES: usize = 3;
+const SEGMENTS: usize = 4;
 /// Count total segments. The pipe lengths and tops.
-pub const TOTAL: u8 = SEGMENTS * 2 + 2;
+pub const TOTAL: usize = (SEGMENTS * 2) + 2;
+
+const PIPE_SPEED: f32 = 3.5;
 
 const GAP: f32 = 45.0;
-pub const PIPE_DV: f32 = 0.1;
+pub const PIPE_DV: f32 = 0.15;
 
 pub fn pipe_position(t: f32) -> f32 {
-    GAP + 10.0 + t.sin() * ((600.0 / 4.0) - GAP - 10.0)
+    GAP + 10.0 + (t.sin() + 1.0) * ((600.0 / 4.0) - ((GAP + 10.0) * 2.0))
+
+}
+
+#[derive(Debug)]
+pub struct PipeTracker {
+    pipes_seen: usize,
+    top: VecDeque<f32>,
+    time: f32,
+}
+
+impl PipeTracker {
+    pub fn new() -> Self {
+        PipeTracker {
+            pipes_seen: 1,
+            top: VecDeque::new(),
+            time: 0.0,
+        }
+    }
+
+    fn get_pipe_top(&mut self) -> f32 {
+        self.pipes_seen += 1;
+        pipe_position(self.time)
+    }
+
+    fn init_get_pipe_top(&mut self) -> f32 {
+				self.time += PIPE_DV;
+        let result = self.get_pipe_top();
+        self.pipes_seen = 0;
+        self.top.push_back(result);
+        result
+    }
+
+    // Returns the direction pipe has to move.
+    pub fn get_pipe_difference(&mut self) -> f32 {
+        // need to go back by the number of integers of other pipes.
+
+        let last_pos = self.top.front().expect("Pipe wasn't placed!").clone();
+        let now_pos = self.get_pipe_top();
+
+        if (self.pipes_seen == 10) {
+            self.top.pop_front();
+            self.top.push_back(now_pos);
+            self.pipes_seen = 0;
+						self.time += PIPE_DV;
+        }
+        now_pos - last_pos
+    }
 }
 
 fn create_pipe_bottom(
@@ -30,7 +79,7 @@ fn create_pipe_bottom(
     pipe_top.is_pipe = true;
     let pipe_top = pipe_top
         .scroller(total_dist)
-        .set_velocity(ggez::nalgebra::Vector2::new(-0.7, 0.0));
+        .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0));
 
     let segments = SEGMENTS;
     let mut p = (0..segments)
@@ -43,7 +92,7 @@ fn create_pipe_bottom(
                 Point2::new(x, top + top_height + (sprite_base.height * (i as f32)));
             pipe_bottom
                 .scroller(total_dist)
-                .set_velocity(ggez::nalgebra::Vector2::new(-0.7, 0.0))
+                .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0))
         })
         .collect::<Vec<Entity>>();
     p.push(pipe_top);
@@ -53,43 +102,37 @@ fn create_pipe_bottom(
 pub fn create_pipes(
     sprite_base: Sprite,
     sprite_top: Sprite,
+    pipe_tracker: &mut PipeTracker,
     x: f32,
-) -> (Vec<Entity>, VecDeque<f32>) {
+) -> Vec<Entity> {
     let number_of_pipes = NUM_PIPES;
     let width = sprite_top.width;
     let space_width = width * 1.5;
     let total_dist = (width + space_width) * (number_of_pipes as f32);
-    let mut dequeue = VecDeque::with_capacity(5);
-
-    for i in 0..number_of_pipes {
-        dequeue.push_back(i as f32 * PIPE_DV);
-    }
 
     let gap = GAP;
-    (
-        (0..number_of_pipes)
-            .into_iter()
-            .flat_map(|i| {
-                let top = pipe_position(*dequeue.get(i as usize).unwrap_or(&0.0));
-                let mut bottom = create_pipe_bottom(
-                    sprite_base.clone(),
-                    sprite_top.clone(),
-                    x + (space_width + width) * (i as f32),
-                    top,
-                    total_dist,
-                );
-                bottom.extend(create_pipe_top(
-                    sprite_base.clone(),
-                    sprite_top.clone(),
-                    x + (space_width + width) * (i as f32),
-                    top - gap,
-                    total_dist,
-                ));
-                bottom
-            })
-            .collect(),
-        dequeue,
-    )
+    (0..number_of_pipes)
+        .into_iter()
+        .flat_map(|i| {
+            let top = pipe_tracker.init_get_pipe_top();
+            println!("REAL FIRST POS: {:?}", top);
+            let mut bottom = create_pipe_bottom(
+                sprite_base.clone(),
+                sprite_top.clone(),
+                x + (space_width + width) * (i as f32),
+                top,
+                total_dist,
+            );
+            bottom.extend(create_pipe_top(
+                sprite_base.clone(),
+                sprite_top.clone(),
+                x + (space_width + width) * (i as f32),
+                top - gap,
+                total_dist,
+            ));
+            bottom
+        })
+        .collect()
 }
 
 fn create_pipe_top(
@@ -109,7 +152,7 @@ fn create_pipe_top(
     pipe_top.is_pipe = true;
     let pipe_top = pipe_top
         .scroller(total_dist)
-        .set_velocity(ggez::nalgebra::Vector2::new(-0.7, 0.0));
+        .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0));
 
     let segments = SEGMENTS;
     let mut p = (0..segments)
@@ -122,7 +165,7 @@ fn create_pipe_top(
                 Point2::new(x, top - top_height - (sprite_base.height * (i as f32)));
             pipe_bottom
                 .scroller(total_dist)
-                .set_velocity(ggez::nalgebra::Vector2::new(-0.7, 0.0))
+                .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0))
         })
         .collect::<Vec<Entity>>();
     p.push(pipe_top);

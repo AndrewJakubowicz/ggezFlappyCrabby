@@ -1,4 +1,5 @@
 use crate::atlas::Sprite;
+use crate::pipe::PipeTracker;
 use ggez::event::EventHandler;
 use ggez::graphics;
 use ggez::graphics::spritebatch::SpriteBatch;
@@ -72,7 +73,7 @@ impl Entity {
 }
 
 impl Entity {
-    pub fn update(&mut self, ctx: &mut Context) -> GameResult {
+    pub fn update(&mut self, ctx: &mut Context, pt: &mut PipeTracker) -> GameResult {
         let delta = ggez::timer::delta(ctx).as_nanos() as f32;
 
         if let Some(physics) = &mut self.physics {
@@ -111,10 +112,11 @@ impl Entity {
                 if let Some(sprite) = &self.sprite {
                     let right_pos = sprite.width + self.position.x;
                     if right_pos < 0.0 {
-                        self.position.x += scroll.jump_distance;
                         if (self.is_pipe) {
-                            println!("Pipe jump");
+                            let diff = pt.get_pipe_difference();
+                            self.position.y += diff;
                         }
+                        self.position.x += scroll.jump_distance;
                     }
                 }
             }

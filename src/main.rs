@@ -10,7 +10,7 @@ mod entity;
 use entity::Entity;
 mod atlas;
 mod pipe;
-use pipe::create_pipes;
+use pipe::{create_pipes, PipeTracker};
 
 struct GameState {
     /// Array of entities.
@@ -18,15 +18,19 @@ struct GameState {
     entities: Vec<Entity>,
     /// The sprite batch of all the images
     spritebatch: SpriteBatch,
+    /// The struct that moves the pipes around :)
+    /// Can use any function over time between 0 and 600/16
+    pt: PipeTracker,
 }
 
 impl GameState {
     /// Creates a new GameState
     /// Panics if can't access the sprite image resource.
-    fn new(spritebatch: SpriteBatch) -> Self {
+    fn new(spritebatch: SpriteBatch, pt: PipeTracker) -> Self {
         Self {
             entities: vec![],
             spritebatch,
+            pt,
         }
     }
 }
@@ -34,7 +38,7 @@ impl GameState {
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         for i in 0..self.entities.len() {
-            self.entities[i].update(ctx)?;
+            self.entities[i].update(ctx, &mut self.pt)?;
         }
         Ok(())
     }
@@ -82,11 +86,11 @@ fn main() {
 
     let (ctx, event_loop) = &mut cb.build().expect("Failed to build ggez!");
 
+    let mut pipe_tracker = pipe::PipeTracker::new();
+
     let image = graphics::Image::new(ctx, "/texture_atlas.png").unwrap();
     let mut batch = graphics::spritebatch::SpriteBatch::new(image);
     batch.set_filter(graphics::FilterMode::Nearest);
-
-    let mut state = GameState::new(batch);
 
     let sprites =
         atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
@@ -96,14 +100,16 @@ fn main() {
     let player = create_player(crab0);
 
     let mut entities = create_tiles(floor_tile);
-    let (pipes, mid_points) = create_pipes(
+    let pipes = create_pipes(
         sprites.create_sprite("pipe_bottom.png"),
         sprites.create_sprite("pipe_top.png"),
+        &mut pipe_tracker,
         200.0,
     );
     entities.extend(pipes);
     entities.extend(vec![player]);
 
+    let mut state = GameState::new(batch, pipe_tracker);
     state.entities = entities;
 
     event::run(ctx, event_loop, &mut state).unwrap();
