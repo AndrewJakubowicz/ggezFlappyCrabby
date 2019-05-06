@@ -10,6 +10,7 @@ mod entity;
 use entity::Entity;
 mod atlas;
 mod pipe;
+use entity::PlayState;
 use pipe::{create_pipes, PipeTracker};
 
 struct GameState {
@@ -21,6 +22,7 @@ struct GameState {
     /// The struct that moves the pipes around :)
     /// Can use any function over time between 0 and 600/16
     pt: PipeTracker,
+    play_state: PlayState,
 }
 
 impl GameState {
@@ -31,6 +33,7 @@ impl GameState {
             entities: vec![],
             spritebatch,
             pt,
+            play_state: PlayState::StartScreen,
         }
     }
 }
@@ -38,8 +41,14 @@ impl GameState {
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         for i in 0..self.entities.len() {
-            self.entities[i].update(ctx, &mut self.pt)?;
+            let (result, state) = self.entities[i].update(ctx, &mut self.pt, &self.play_state);
+            result?;
+            if self.play_state != PlayState::Play && state == PlayState::Play {
+                self.play_state = PlayState::Play;
+                break;
+            }
         }
+        /// TODO: Another loop to check if player is dead.
         Ok(())
     }
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {

@@ -13,6 +13,14 @@ const DEBUG: bool = true;
 const GRAVITY: f32 = 0.28;
 const JUMP_IMPULSE: f32 = 2.75;
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+/// The current state of the game.
+pub enum PlayState {
+    StartScreen,
+    Play,
+    Dead,
+}
+
 /// The physics on the entity.
 struct Physics {
     vel: Vector2<f32>,
@@ -73,8 +81,14 @@ impl Entity {
 }
 
 impl Entity {
-    pub fn update(&mut self, ctx: &mut Context, pt: &mut PipeTracker) -> GameResult {
+    pub fn update(
+        &mut self,
+        ctx: &mut Context,
+        pt: &mut PipeTracker,
+        state: &PlayState,
+    ) -> (GameResult, PlayState) {
         let delta = ggez::timer::delta(ctx).as_nanos() as f32;
+        let mut state = state.clone();
 
         if let Some(physics) = &mut self.physics {
             physics.acc = if physics.gravity {
@@ -84,7 +98,10 @@ impl Entity {
             };
         }
 
-        if self.is_player && self.physics.is_some() {
+        if self.is_player
+            && self.physics.is_some()
+            && (state == PlayState::StartScreen || state == PlayState::Play)
+        {
             use ggez::event::KeyCode;
             use ggez::input::keyboard;
             if !keyboard::pressed_keys(ctx).contains(&KeyCode::Space) && !self.can_jump {
@@ -96,33 +113,48 @@ impl Entity {
                     physics.acc = Vector2::new(0.0, -GRAVITY);
                     physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
                 }
+                if state == PlayState::StartScreen {
+                    state = PlayState::Play;
+                }
                 self.can_jump = false;
             }
         }
 
+        // Self jumping script on the start screen.
+        if self.is_player && self.physics.is_some() && state == PlayState::StartScreen {
+            if let Some(physics) = &mut self.physics {
+                if self.position.y > 600.0 / 8.0 {
+                    physics.acc = Vector2::new(0.0, -GRAVITY);
+                    physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
+                }
+            }
+        }
+
         if let Some(physics) = &mut self.physics {
-            physics.acc.scale(1.0 / delta);
+            if state == PlayState::Play || (state == PlayState::StartScreen && self.is_player) {
+                physics.acc.scale(1.0 / delta);
 
-            physics.vel += physics.acc;
-            physics.vel.scale(1.0 / delta);
-            self.position += physics.vel;
+                physics.vel += physics.acc;
+                physics.vel.scale(1.0 / delta);
+                self.position += physics.vel;
 
-            // prevent falling off the left side of the screen.
-            if let Some(scroll) = &self.scroller {
-                if let Some(sprite) = &self.sprite {
-                    let right_pos = sprite.width + self.position.x;
-                    if right_pos < 0.0 {
-                        if (self.is_pipe) {
-                            let diff = pt.get_pipe_difference();
-                            self.position.y += diff;
+                // prevent falling off the left side of the screen.
+                if let Some(scroll) = &self.scroller {
+                    if let Some(sprite) = &self.sprite {
+                        let right_pos = sprite.width + self.position.x;
+                        if right_pos < 0.0 {
+                            if (self.is_pipe) {
+                                let diff = pt.get_pipe_difference();
+                                self.position.y += diff;
+                            }
+                            self.position.x += scroll.jump_distance;
                         }
-                        self.position.x += scroll.jump_distance;
                     }
                 }
             }
         }
 
-        Ok(())
+        (Ok(()), state)
     }
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
