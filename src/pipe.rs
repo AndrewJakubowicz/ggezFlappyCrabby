@@ -1,6 +1,8 @@
 use crate::entity::Entity;
 use crate::Sprite;
 use ggez::nalgebra::{Point2, Vector2};
+use noise::NoiseFn;
+use noise::Perlin;
 use std::collections::VecDeque;
 
 const NUM_PIPES: usize = 3;
@@ -8,21 +10,18 @@ const SEGMENTS: usize = 4;
 /// Count total segments. The pipe lengths and tops.
 pub const TOTAL: usize = (SEGMENTS * 2) + 2;
 
-const PIPE_SPEED: f32 = 3.5;
+const PIPE_SPEED: f32 = 1.2;
+const SPACE_MULTIPLIER: f32 = 1.9;
 
 const GAP: f32 = 45.0;
-pub const PIPE_DV: f32 = 0.15;
-
-pub fn pipe_position(t: f32) -> f32 {
-    GAP + 10.0 + (t.sin() + 1.0) * ((600.0 / 4.0) - ((GAP + 10.0) * 2.0))
-
-}
+pub const PIPE_DV: f32 = 0.4;
 
 #[derive(Debug)]
 pub struct PipeTracker {
     pipes_seen: usize,
     top: VecDeque<f32>,
     time: f32,
+    randomFn: Perlin,
 }
 
 impl PipeTracker {
@@ -31,16 +30,18 @@ impl PipeTracker {
             pipes_seen: 1,
             top: VecDeque::new(),
             time: 0.0,
+            randomFn: Perlin::new(),
         }
     }
 
     fn get_pipe_top(&mut self) -> f32 {
         self.pipes_seen += 1;
-        pipe_position(self.time)
+        let noise = (self.randomFn.get([self.time as f64, self.time as f64]) as f32 + 1.0);
+        (GAP + 5.0) + noise * ((600.0 / 4.0) - ((GAP + 5.0) * 2.0))
     }
 
     fn init_get_pipe_top(&mut self) -> f32 {
-				self.time += PIPE_DV;
+        self.time += PIPE_DV;
         let result = self.get_pipe_top();
         self.pipes_seen = 0;
         self.top.push_back(result);
@@ -58,7 +59,7 @@ impl PipeTracker {
             self.top.pop_front();
             self.top.push_back(now_pos);
             self.pipes_seen = 0;
-						self.time += PIPE_DV;
+            self.time += PIPE_DV;
         }
         now_pos - last_pos
     }
@@ -107,7 +108,7 @@ pub fn create_pipes(
 ) -> Vec<Entity> {
     let number_of_pipes = NUM_PIPES;
     let width = sprite_top.width;
-    let space_width = width * 1.5;
+    let space_width = width * SPACE_MULTIPLIER;
     let total_dist = (width + space_width) * (number_of_pipes as f32);
 
     let gap = GAP;

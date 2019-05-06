@@ -9,3 +9,4 @@ ggez = "0.5.0-rc.2"
 cgmath = { version = "0.17", features = ["mint"]}
 serde = {version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+noise = "0.5.1"
