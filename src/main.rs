@@ -23,23 +23,62 @@ struct GameState {
     /// Can use any function over time between 0 and 600/16
     pt: PipeTracker,
     play_state: PlayState,
+    atlas: atlas::Atlas,
 }
 
 impl GameState {
     /// Creates a new GameState
     /// Panics if can't access the sprite image resource.
-    fn new(spritebatch: SpriteBatch, pt: PipeTracker) -> Self {
+    fn new(spritebatch: SpriteBatch) -> Self {
+        let mut pipe_tracker = pipe::PipeTracker::new();
+        let sprites =
+            atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
+
         Self {
-            entities: vec![],
+            entities: GameState::create_start_entities(&sprites, &mut pipe_tracker),
             spritebatch,
-            pt,
+            pt: pipe_tracker,
             play_state: PlayState::StartScreen,
+            atlas: sprites,
         }
+    }
+
+    /// The last entity *must* be the player.
+    fn create_start_entities(
+        sprites: &atlas::Atlas,
+        pipe_tracker: &mut PipeTracker,
+    ) -> Vec<Entity> {
+        let crab0 = sprites.create_sprite("crab0.png");
+        let floor_tile = sprites.create_sprite("floor_tile.png");
+        let player = create_player(crab0);
+        let mut entities = create_tiles(floor_tile);
+        let pipes = create_pipes(
+            sprites.create_sprite("pipe_bottom.png"),
+            sprites.create_sprite("pipe_top.png"),
+            pipe_tracker,
+            200.0,
+        );
+        entities.extend(pipes);
+        entities.extend(vec![player]);
+        entities
+    }
+
+    fn restart(&mut self) {
+        let entities = GameState::create_start_entities(&self.atlas, &mut self.pt);
+        self.entities = entities;
+				self.play_state = PlayState::StartScreen;
     }
 }
 
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+				let state = self.play_state.clone();
+				match state {
+					PlayState::Dead { time } => if (ggez::timer::time_since_start(ctx) - time) > std::time::Duration::from_secs(2) {
+						self.restart()
+					},
+					_ => {}
+				}
         for i in 0..self.entities.len() {
             let (result, state) = self.entities[i].update(ctx, &mut self.pt, &self.play_state);
             result?;
@@ -61,7 +100,11 @@ impl EventHandler for GameState {
                     let mut other_rect = other[i].get_bounds();
                     other_rect.move_to(other[i].position.clone());
                     if other_rect.overlaps(&player_rect) {
-                        println!("{:?} - {:?}", player_rect, other_rect);
+                        if self.play_state == PlayState::Play {
+                            self.play_state = PlayState::Dead {
+                                time: ggez::timer::time_since_start(ctx),
+                            };
+                        }
                     }
                 }
             }
@@ -112,31 +155,11 @@ fn main() {
 
     let (ctx, event_loop) = &mut cb.build().expect("Failed to build ggez!");
 
-    let mut pipe_tracker = pipe::PipeTracker::new();
-
     let image = graphics::Image::new(ctx, "/texture_atlas.png").unwrap();
     let mut batch = graphics::spritebatch::SpriteBatch::new(image);
     batch.set_filter(graphics::FilterMode::Nearest);
 
-    let sprites =
-        atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
-    let crab0 = sprites.create_sprite("crab0.png");
-    let floor_tile = sprites.create_sprite("floor_tile.png");
-
-    let player = create_player(crab0);
-
-    let mut entities = create_tiles(floor_tile);
-    let pipes = create_pipes(
-        sprites.create_sprite("pipe_bottom.png"),
-        sprites.create_sprite("pipe_top.png"),
-        &mut pipe_tracker,
-        200.0,
-    );
-    entities.extend(pipes);
-    entities.extend(vec![player]);
-
-    let mut state = GameState::new(batch, pipe_tracker);
-    state.entities = entities;
+    let mut state = GameState::new(batch);
 
     event::run(ctx, event_loop, &mut state).unwrap();
 }

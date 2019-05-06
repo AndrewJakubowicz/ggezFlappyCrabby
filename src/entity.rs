@@ -18,7 +18,7 @@ const JUMP_IMPULSE: f32 = 2.75;
 pub enum PlayState {
     StartScreen,
     Play,
-    Dead,
+    Dead { time: std::time::Duration },
 }
 
 /// The physics on the entity.
@@ -139,7 +139,7 @@ impl Entity {
         }
 
         if let Some(physics) = &mut self.physics {
-            if state == PlayState::Play || (state == PlayState::StartScreen && self.is_player) {
+            if !(PlayState::StartScreen == state && self.is_pipe) {
                 physics.acc.scale(1.0 / delta);
 
                 physics.vel += physics.acc;
