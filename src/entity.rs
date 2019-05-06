@@ -9,8 +9,8 @@ use ggez::GameResult;
 
 const DEBUG: bool = true;
 
-const GRAVITY: f32 = 0.25;
-const JUMP_IMPULSE: f32 = 3.3;
+const GRAVITY: f32 = 0.28;
+const JUMP_IMPULSE: f32 = 2.75;
 
 /// The physics on the entity.
 struct Physics {
@@ -30,6 +30,7 @@ pub struct Entity {
     can_jump: bool,
     physics: Option<Physics>,
     scroller: Option<Scroll>,
+    pub is_pipe: bool,
 }
 
 /// Everything that can be interacted with is an entity.
@@ -43,6 +44,7 @@ impl Entity {
             physics: None,
             can_jump: true,
             scroller: None,
+            is_pipe: false,
         }
     }
     pub fn add_physics(mut self, with_gravity: bool) -> Self {
@@ -110,6 +112,9 @@ impl Entity {
                     let right_pos = sprite.width + self.position.x;
                     if right_pos < 0.0 {
                         self.position.x += scroll.jump_distance;
+                        if (self.is_pipe) {
+                            println!("Pipe jump");
+                        }
                     }
                 }
             }

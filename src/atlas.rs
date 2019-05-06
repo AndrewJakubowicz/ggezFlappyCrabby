@@ -77,7 +77,7 @@ impl Atlas {
 pub struct Sprite {
     /// The square that we want to cut out of the texture atlas.
     rect: graphics::Rect,
-    scale: Vector2<f32>,
+    pub scale: Vector2<f32>,
     pub width: f32,
     pub height: f32,
 }

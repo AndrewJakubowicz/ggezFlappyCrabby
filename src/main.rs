@@ -9,6 +9,8 @@ use ggez::{
 mod entity;
 use entity::Entity;
 mod atlas;
+mod pipe;
+use pipe::create_pipes;
 
 struct GameState {
     /// Array of entities.
@@ -94,6 +96,12 @@ fn main() {
     let player = create_player(crab0);
 
     let mut entities = create_tiles(floor_tile);
+    let (pipes, mid_points) = create_pipes(
+        sprites.create_sprite("pipe_bottom.png"),
+        sprites.create_sprite("pipe_top.png"),
+        200.0,
+    );
+    entities.extend(pipes);
     entities.extend(vec![player]);
 
     state.entities = entities;
@@ -112,7 +120,7 @@ fn create_player(sprite: Sprite) -> Entity {
 fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Entity {
     let mut tile = entity::Entity::new().add_physics(false);
     tile.sprite = Some(sprite);
-    tile.position = Point2::new(x, 100.0);
+    tile.position = Point2::new(x, 145.0);
     tile.scroller(jump)
         .set_velocity(ggez::nalgebra::Vector2::new(-1.0, 0.0))
 }
