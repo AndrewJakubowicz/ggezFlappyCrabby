@@ -8,7 +8,7 @@ use ggez::nalgebra::{Point2, Vector2};
 use ggez::Context;
 use ggez::GameResult;
 
-const DEBUG: bool = false;
+const DEBUG: bool = true;
 
 const GRAVITY: f32 = 0.28;
 const JUMP_IMPULSE: f32 = 2.75;
@@ -22,8 +22,8 @@ pub enum PlayState {
 }
 
 /// The physics on the entity.
-struct Physics {
-    vel: Vector2<f32>,
+pub struct Physics {
+    pub vel: Vector2<f32>,
     acc: Vector2<f32>,
     gravity: bool,
 }
@@ -37,9 +37,10 @@ pub struct Entity {
     pub position: Point2<f32>,
     pub is_player: bool,
     can_jump: bool,
-    physics: Option<Physics>,
+    pub physics: Option<Physics>,
     scroller: Option<Scroll>,
     pub is_pipe: bool,
+    pub player_sprites: Option<Vec<Sprite>>,
 }
 
 /// Everything that can be interacted with is an entity.
@@ -54,6 +55,7 @@ impl Entity {
             can_jump: true,
             scroller: None,
             is_pipe: false,
+            player_sprites: None,
         }
     }
     pub fn add_physics(mut self, with_gravity: bool) -> Self {
@@ -151,7 +153,7 @@ impl Entity {
                     if let Some(sprite) = &self.sprite {
                         let right_pos = sprite.width + self.position.x;
                         if right_pos < 0.0 {
-                            if (self.is_pipe) {
+                            if self.is_pipe {
                                 let diff = pt.get_pipe_difference();
                                 self.position.y += diff;
                             }
@@ -160,28 +162,68 @@ impl Entity {
                     }
                 }
             }
+
+            if self.is_player {
+                // clamp y to not go above the top of the screen easily.
+                self.position.y = if self.position.y < -16.0 {
+                    -16.0
+                } else {
+                    self.position.y
+                }
+            }
         }
 
         (Ok(()), state)
     }
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
-        if let Some(s) = &mut self.sprite {
-            s.add_draw_param(self.position.clone(), batch);
-            if DEBUG {
-                let mut rect = s.aabb();
-                let mesh = graphics::Mesh::new_rectangle(
-                    ctx,
-                    graphics::DrawMode::stroke(1.0),
-                    rect,
-                    graphics::BLACK,
-                )?;
-                let p = graphics::DrawParam::new()
-                    .dest(self.position.clone() * 4.0)
-                    .scale(Vector2::new(4.0, 4.0));
-                graphics::draw(ctx, &mesh, p)?;
+        if self.player_sprites.is_some() && self.physics.is_some() {
+            if let Some(s) = &mut self.player_sprites {
+                if let Some(p) = &self.physics {
+                    // need velocity to map to these rotations between -0.2 and 0.2!
+                    let angle = rescale_range(p.vel.y, -7.0, 7.0, -0.6, 0.6);
+                    if p.vel.y < 0.0 {
+                        batch.add(
+                            s[0].add_draw_param(self.position.clone())
+                                .offset(Point2::new(0.5, 0.5))
+                                .rotation(angle),
+                        );
+                    } else {
+                        batch.add(
+                            s[1].add_draw_param(self.position.clone())
+                                .offset(Point2::new(0.5, 0.5))
+                                .rotation(angle),
+                        );
+                    }
+                }
+            }
+        } else {
+            if let Some(s) = &mut self.sprite {
+                batch.add(s.add_draw_param(self.position.clone()));
+                if DEBUG {
+                    let mut rect = s.aabb();
+                    let mesh = graphics::Mesh::new_rectangle(
+                        ctx,
+                        graphics::DrawMode::stroke(1.0),
+                        rect,
+                        graphics::BLACK,
+                    )?;
+                    let p = graphics::DrawParam::new()
+                        .dest(self.position.clone() * 4.0)
+                        .scale(Vector2::new(4.0, 4.0));
+                    graphics::draw(ctx, &mesh, p)?;
+                }
             }
         }
         Ok(())
     }
+}
+
+/// Returns an f32 scaled [oldMin, oldMax] into the range [newMin, newMax]
+/// Thanks https://stackoverflow.com/a/5295202/6421793
+fn rescale_range(value: f32, oldMin: f32, oldMax: f32, newMin: f32, newMax: f32) -> f32 {
+    use ggez::nalgebra::clamp;
+    let old_range = oldMax - oldMin;
+    let new_range = newMax - newMin;
+    (((clamp(value, oldMin, oldMax) - oldMin) * new_range) / old_range) + newMin
 }

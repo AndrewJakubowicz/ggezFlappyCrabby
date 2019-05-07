@@ -49,8 +49,9 @@ impl GameState {
         pipe_tracker: &mut PipeTracker,
     ) -> Vec<Entity> {
         let crab0 = sprites.create_sprite("crab0.png");
+        let crab1 = sprites.create_sprite("crab1.png");
         let floor_tile = sprites.create_sprite("floor_tile.png");
-        let player = create_player(crab0);
+        let player = create_player(crab0.clone(), vec![crab0, crab1]);
         let mut entities = create_tiles(floor_tile);
         let pipes = create_pipes(
             sprites.create_sprite("pipe_bottom.png"),
@@ -94,6 +95,16 @@ impl EventHandler for GameState {
         // TODO: Another loop to check if player is dead.
         {
             if let Some((player, other)) = self.entities.split_last_mut() {
+                if player.position.y > 1000.0 {
+                    if self.play_state == PlayState::Play {
+                        if let Some(p) = &mut player.physics {
+                            p.vel.y = -100.0;
+                        }
+                        self.play_state = PlayState::Dead {
+                            time: ggez::timer::time_since_start(ctx),
+                        };
+                    }
+                }
                 // Check player against others.
                 let mut player_rect = player.get_bounds();
                 player_rect.move_to(player.position.clone());
@@ -168,11 +179,12 @@ fn main() {
     event::run(ctx, event_loop, &mut state).unwrap();
 }
 
-fn create_player(sprite: Sprite) -> Entity {
+fn create_player(sprite: Sprite, player_sprites: Vec<Sprite>) -> Entity {
     let mut player = entity::Entity::new().add_physics(true);
     player.sprite = Some(sprite);
     player.is_player = true;
-    player.position = Point2::new(40.0, 0.0);
+    player.position = Point2::new(40.0, -16.0);
+    player.player_sprites = Some(player_sprites);
     player
 }
 
