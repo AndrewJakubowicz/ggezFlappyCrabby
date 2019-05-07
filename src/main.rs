@@ -10,7 +10,7 @@ mod entity;
 use entity::Entity;
 mod atlas;
 mod pipe;
-use entity::PlayState;
+use entity::{PlayState, ScoringPipe};
 use pipe::{create_pipes, PipeTracker};
 
 struct GameState {
@@ -24,6 +24,8 @@ struct GameState {
     pt: PipeTracker,
     play_state: PlayState,
     atlas: atlas::Atlas,
+		score: i128,
+		best_score: i128,
 }
 
 impl GameState {
@@ -40,6 +42,8 @@ impl GameState {
             pt: pipe_tracker,
             play_state: PlayState::StartScreen,
             atlas: sprites,
+            score: 0,
+						best_score: 0,
         }
     }
 
@@ -70,6 +74,10 @@ impl GameState {
         self.pt = pt;
         self.entities = entities;
         self.play_state = PlayState::StartScreen;
+				if self.score > self.best_score {
+					self.best_score = self.score;
+				}
+				self.score = 0;
     }
 }
 
@@ -109,6 +117,18 @@ impl EventHandler for GameState {
                 let mut player_rect = player.get_bounds();
                 player_rect.move_to(player.position.clone());
                 for i in 0..other.len() {
+										{
+											let mut scored = false;
+											if let Some(ScoringPipe::ReadyToScore) = other[i].scoring_pipe {
+												if other[i].position.x < 20.0 {
+													scored = true;
+												}
+											}
+											if scored && self.play_state == PlayState::Play {
+												other[i].scoring_pipe = Some(ScoringPipe::Scored);
+												self.score += 1;
+											}
+										}
                     if other[i].sprite.is_none() {
                         continue;
                     }
@@ -127,7 +147,7 @@ impl EventHandler for GameState {
         Ok(())
     }
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        graphics::clear(ctx, graphics::Color::from_rgb(240, 230, 255));
+        graphics::clear(ctx, graphics::Color::from_rgb(112, 216, 255));
 
         for i in 0..self.entities.len() {
             self.entities[i].draw(ctx, &mut self.spritebatch)?;
@@ -139,8 +159,7 @@ impl EventHandler for GameState {
             self.spritebatch.clear();
         }
 
-        let fps = timer::fps(ctx);
-        let fps_display = Text::new(format!("FPS: {}", fps));
+        let fps_display = Text::new(format!("Best Score: {}   Current Score: {}", self.best_score, self.score));
 
         graphics::draw(
             ctx,

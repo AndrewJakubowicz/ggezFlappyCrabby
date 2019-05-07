@@ -142,6 +142,7 @@ fn create_pipe_top(
     top: f32,
     total_dist: f32,
 ) -> Vec<Entity> {
+		use crate::entity::ScoringPipe;
     let top_height = sprite_top.height;
 
     let mut pipe_top = Entity::new().add_physics(false);
@@ -150,6 +151,7 @@ fn create_pipe_top(
     pipe_top.sprite = Some(sp_top);
     pipe_top.position = Point2::new(x, top);
     pipe_top.is_pipe = true;
+		pipe_top.scoring_pipe = Some(ScoringPipe::ReadyToScore);
     let pipe_top = pipe_top
         .scroller(total_dist)
         .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0));

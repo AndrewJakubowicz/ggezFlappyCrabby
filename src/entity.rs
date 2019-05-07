@@ -32,6 +32,12 @@ struct Scroll {
     jump_distance: f32,
 }
 
+#[derive(PartialEq, Eq, Clone)]
+pub enum ScoringPipe {
+	ReadyToScore,
+	Scored
+}
+
 pub struct Entity {
     pub sprite: Option<Sprite>,
     pub position: Point2<f32>,
@@ -41,6 +47,7 @@ pub struct Entity {
     scroller: Option<Scroll>,
     pub is_pipe: bool,
     pub player_sprites: Option<Vec<Sprite>>,
+		pub scoring_pipe: Option<ScoringPipe>,
 }
 
 /// Everything that can be interacted with is an entity.
@@ -56,6 +63,7 @@ impl Entity {
             scroller: None,
             is_pipe: false,
             player_sprites: None,
+						scoring_pipe: None
         }
     }
     pub fn add_physics(mut self, with_gravity: bool) -> Self {
@@ -157,6 +165,9 @@ impl Entity {
                                 let diff = pt.get_pipe_difference();
                                 self.position.y += diff;
                             }
+														if self.scoring_pipe.is_some() {
+															self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+														}
                             self.position.x += scroll.jump_distance;
                         }
                     }
