@@ -8,7 +8,7 @@ use ggez::nalgebra::{Point2, Vector2};
 use ggez::Context;
 use ggez::GameResult;
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 const GRAVITY: f32 = 0.28;
 const JUMP_IMPULSE: f32 = 2.75;

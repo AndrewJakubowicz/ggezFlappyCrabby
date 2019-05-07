@@ -64,21 +64,25 @@ impl GameState {
     }
 
     fn restart(&mut self) {
-        let entities = GameState::create_start_entities(&self.atlas, &mut self.pt);
+        let mut pt = PipeTracker::new();
+        let entities = GameState::create_start_entities(&self.atlas, &mut pt);
+        self.pt = pt;
         self.entities = entities;
-				self.play_state = PlayState::StartScreen;
+        self.play_state = PlayState::StartScreen;
     }
 }
 
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-				let state = self.play_state.clone();
-				match state {
-					PlayState::Dead { time } => if (ggez::timer::time_since_start(ctx) - time) > std::time::Duration::from_secs(2) {
-						self.restart()
-					},
-					_ => {}
-				}
+        let state = self.play_state.clone();
+        match state {
+            PlayState::Dead { time } => {
+                if (ggez::timer::time_since_start(ctx) - time) > std::time::Duration::from_secs(2) {
+                    self.restart()
+                }
+            }
+            _ => {}
+        }
         for i in 0..self.entities.len() {
             let (result, state) = self.entities[i].update(ctx, &mut self.pt, &self.play_state);
             result?;
