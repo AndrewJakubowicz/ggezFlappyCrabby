@@ -1,11 +1,14 @@
 use atlas::Sprite;
 use ggez::nalgebra::{Point2, Vector2};
 use ggez::{
+    audio::SoundSource,
     conf::Conf,
     event::EventHandler,
     graphics::{spritebatch::SpriteBatch, Drawable, Text},
     *,
 };
+use rand::distributions::OpenClosed01;
+use rand::{thread_rng, Rng};
 mod entity;
 use entity::Entity;
 mod atlas;
@@ -24,17 +27,25 @@ struct GameState {
     pt: PipeTracker,
     play_state: PlayState,
     atlas: atlas::Atlas,
-		score: i128,
-		best_score: i128,
+    score: i128,
+    best_score: i128,
+    score_sound: ggez::audio::Source,
+    ouch_sound: ggez::audio::Source,
+    begin_sound: ggez::audio::Source,
 }
 
 impl GameState {
     /// Creates a new GameState
     /// Panics if can't access the sprite image resource.
-    fn new(spritebatch: SpriteBatch) -> Self {
+    fn new(ctx: &mut Context, spritebatch: SpriteBatch) -> Self {
         let mut pipe_tracker = pipe::PipeTracker::new();
         let sprites =
             atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
+        let sound = audio::Source::new(ctx, "/score_point.wav").unwrap();
+        let ouch = audio::Source::new(ctx, "/ouch.wav").unwrap();
+        let mut begin_sound = audio::Source::new(ctx, "/begin_game.wav").unwrap();
+
+        begin_sound.play_detached();
 
         Self {
             entities: GameState::create_start_entities(&sprites, &mut pipe_tracker),
@@ -43,7 +54,10 @@ impl GameState {
             play_state: PlayState::StartScreen,
             atlas: sprites,
             score: 0,
-						best_score: 0,
+            best_score: 0,
+            score_sound: sound,
+            ouch_sound: ouch,
+            begin_sound: begin_sound,
         }
     }
 
@@ -69,15 +83,16 @@ impl GameState {
     }
 
     fn restart(&mut self) {
+        self.begin_sound.play_detached();
         let mut pt = PipeTracker::new();
         let entities = GameState::create_start_entities(&self.atlas, &mut pt);
         self.pt = pt;
         self.entities = entities;
         self.play_state = PlayState::StartScreen;
-				if self.score > self.best_score {
-					self.best_score = self.score;
-				}
-				self.score = 0;
+        if self.score > self.best_score {
+            self.best_score = self.score;
+        }
+        self.score = 0;
     }
 }
 
@@ -86,7 +101,7 @@ impl EventHandler for GameState {
         let state = self.play_state.clone();
         match state {
             PlayState::Dead { time } => {
-                if (ggez::timer::time_since_start(ctx) - time) > std::time::Duration::from_secs(2) {
+                if (ggez::timer::time_since_start(ctx) - time) > std::time::Duration::from_secs(1) {
                     self.restart()
                 }
             }
@@ -117,18 +132,21 @@ impl EventHandler for GameState {
                 let mut player_rect = player.get_bounds();
                 player_rect.move_to(player.position.clone());
                 for i in 0..other.len() {
-										{
-											let mut scored = false;
-											if let Some(ScoringPipe::ReadyToScore) = other[i].scoring_pipe {
-												if other[i].position.x < 20.0 {
-													scored = true;
-												}
-											}
-											if scored && self.play_state == PlayState::Play {
-												other[i].scoring_pipe = Some(ScoringPipe::Scored);
-												self.score += 1;
-											}
-										}
+                    {
+                        let mut scored = false;
+                        if let Some(ScoringPipe::ReadyToScore) = other[i].scoring_pipe {
+                            if other[i].position.x < 20.0 {
+                                scored = true;
+                            }
+                        }
+                        if scored && self.play_state == PlayState::Play {
+                            other[i].scoring_pipe = Some(ScoringPipe::Scored);
+                            self.score += 1;
+                            let pitch: f32 = thread_rng().sample(OpenClosed01);
+                            self.score_sound.set_pitch(1.0 + pitch);
+                            self.score_sound.play_detached();
+                        }
+                    }
                     if other[i].sprite.is_none() {
                         continue;
                     }
@@ -136,6 +154,7 @@ impl EventHandler for GameState {
                     other_rect.move_to(other[i].position.clone());
                     if other_rect.overlaps(&player_rect) {
                         if self.play_state == PlayState::Play {
+                            self.ouch_sound.play_detached();
                             self.play_state = PlayState::Dead {
                                 time: ggez::timer::time_since_start(ctx),
                             };
@@ -159,7 +178,10 @@ impl EventHandler for GameState {
             self.spritebatch.clear();
         }
 
-        let fps_display = Text::new(format!("Best Score: {}   Current Score: {}", self.best_score, self.score));
+        let fps_display = Text::new(format!(
+            "Best Score: {}   Current Score: {}",
+            self.best_score, self.score
+        ));
 
         graphics::draw(
             ctx,
@@ -193,7 +215,7 @@ fn main() {
     let mut batch = graphics::spritebatch::SpriteBatch::new(image);
     batch.set_filter(graphics::FilterMode::Nearest);
 
-    let mut state = GameState::new(batch);
+    let mut state = GameState::new(ctx, batch);
 
     event::run(ctx, event_loop, &mut state).unwrap();
 }

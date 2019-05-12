@@ -5,16 +5,16 @@ use noise::NoiseFn;
 use noise::Perlin;
 use std::collections::VecDeque;
 
-const NUM_PIPES: usize = 3;
+const NUM_PIPES: usize = 4;
 const SEGMENTS: usize = 4;
 /// Count total segments. The pipe lengths and tops.
 pub const TOTAL: usize = (SEGMENTS * 2) + 2;
 
 const PIPE_SPEED: f32 = 1.0;
-const SPACE_MULTIPLIER: f32 = 1.9;
+const SPACE_MULTIPLIER: f32 = 1.0;
 
-const GAP: f32 = 52.0;
-pub const PIPE_DV: f32 = 0.4;
+const GAP: f32 = 57.0;
+pub const PIPE_DV: f32 = 0.6;
 
 #[derive(Debug)]
 pub struct PipeTracker {
@@ -142,7 +142,7 @@ fn create_pipe_top(
     top: f32,
     total_dist: f32,
 ) -> Vec<Entity> {
-		use crate::entity::ScoringPipe;
+    use crate::entity::ScoringPipe;
     let top_height = sprite_top.height;
 
     let mut pipe_top = Entity::new().add_physics(false);
@@ -151,7 +151,7 @@ fn create_pipe_top(
     pipe_top.sprite = Some(sp_top);
     pipe_top.position = Point2::new(x, top);
     pipe_top.is_pipe = true;
-		pipe_top.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+    pipe_top.scoring_pipe = Some(ScoringPipe::ReadyToScore);
     let pipe_top = pipe_top
         .scroller(total_dist)
         .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0));

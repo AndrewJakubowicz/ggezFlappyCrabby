@@ -4,9 +4,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
 use std::cell::RefCell;
 use std::path::Path;
-use std::rc::Rc;
-
-pub type RcSpriteBatch = Rc<RefCell<graphics::spritebatch::SpriteBatch>>;
 
 #[derive(Deserialize, Debug)]
 struct Meta {

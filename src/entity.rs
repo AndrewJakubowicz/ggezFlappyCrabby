@@ -8,7 +8,7 @@ use ggez::nalgebra::{Point2, Vector2};
 use ggez::Context;
 use ggez::GameResult;
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 const GRAVITY: f32 = 0.28;
 const JUMP_IMPULSE: f32 = 2.75;
@@ -34,8 +34,8 @@ struct Scroll {
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum ScoringPipe {
-	ReadyToScore,
-	Scored
+    ReadyToScore,
+    Scored,
 }
 
 pub struct Entity {
@@ -47,7 +47,7 @@ pub struct Entity {
     scroller: Option<Scroll>,
     pub is_pipe: bool,
     pub player_sprites: Option<Vec<Sprite>>,
-		pub scoring_pipe: Option<ScoringPipe>,
+    pub scoring_pipe: Option<ScoringPipe>,
 }
 
 /// Everything that can be interacted with is an entity.
@@ -63,7 +63,7 @@ impl Entity {
             scroller: None,
             is_pipe: false,
             player_sprites: None,
-						scoring_pipe: None
+            scoring_pipe: None,
         }
     }
     pub fn add_physics(mut self, with_gravity: bool) -> Self {
@@ -165,9 +165,9 @@ impl Entity {
                                 let diff = pt.get_pipe_difference();
                                 self.position.y += diff;
                             }
-														if self.scoring_pipe.is_some() {
-															self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
-														}
+                            if self.scoring_pipe.is_some() {
+                                self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+                            }
                             self.position.x += scroll.jump_distance;
                         }
                     }
