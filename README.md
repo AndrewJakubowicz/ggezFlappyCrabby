@@ -14,3 +14,6 @@ Use the command `cargo run --release`.
 ## Controls
 
 Press space bar
+
+
+The hit box is slightly inaccurate for added difficulty. Definitely an intentional feature ;)
