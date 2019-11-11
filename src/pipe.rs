@@ -14,7 +14,7 @@ const PIPE_SPEED: f32 = 1.0;
 const SPACE_MULTIPLIER: f32 = 1.0;
 
 const VERTICAL_GAP: f32 = 57.0;
-pub const PIPE_DV: f32 = 0.6;
+pub const VERTICAL_GAP_DEVIANCE: f32 = 0.6;
 
 #[derive(Debug)]
 pub struct PipeTracker {
@@ -41,7 +41,7 @@ impl PipeTracker {
     }
 
     fn init_get_pipe_top(&mut self) -> f32 {
-        self.time += PIPE_DV;
+        self.time += VERTICAL_GAP_DEVIANCE;
         let result = self.get_pipe_top();
         self.pipes_seen = 0;
         self.top.push_back(result);
@@ -59,7 +59,7 @@ impl PipeTracker {
             self.top.pop_front();
             self.top.push_back(now_pos);
             self.pipes_seen = 0;
-            self.time += PIPE_DV;
+            self.time += VERTICAL_GAP_DEVIANCE;
         }
         now_pos - last_pos
     }
