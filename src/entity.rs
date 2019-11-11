@@ -128,8 +128,7 @@ impl Entity {
 
             if keyboard::is_key_pressed(ctx, KeyCode::Space) && self.can_jump {
                 if let Some(physics) = &mut self.physics {
-                    physics.acc = Vector2::new(0.0, -GRAVITY);
-                    physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
+                    Entity::jump(physics);
                 }
                 if state == PlayState::StartScreen {
                     state = PlayState::Play;
@@ -140,12 +139,7 @@ impl Entity {
 
         // Self jumping script on the start screen.
         if self.is_player && self.physics.is_some() && state == PlayState::StartScreen {
-            if let Some(physics) = &mut self.physics {
-                if self.position.y > 600.0 / 8.0 {
-                    physics.acc = Vector2::new(0.0, -GRAVITY);
-                    physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
-                }
-            }
+            self.auth_jump()
         }
 
         if let Some(physics) = &mut self.physics {
@@ -185,6 +179,11 @@ impl Entity {
         }
 
         (Ok(()), state)
+    }
+
+    fn jump(physics: &mut Physics) {
+        physics.acc = Vector2::new(0.0, -GRAVITY);
+        physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
     }
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
@@ -227,6 +226,14 @@ impl Entity {
             }
         }
         Ok(())
+    }
+
+    fn auth_jump(&mut self) -> () {
+        if let Some(physics) = &mut self.physics {
+            if self.position.y > 600.0 / 8.0 {
+                Entity::jump(physics);
+            }
+        }
     }
 }
 
