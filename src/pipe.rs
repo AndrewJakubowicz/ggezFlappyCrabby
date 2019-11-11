@@ -13,7 +13,7 @@ pub const TOTAL: usize = (SEGMENTS * 2) + 2;
 const PIPE_SPEED: f32 = 1.0;
 const SPACE_MULTIPLIER: f32 = 1.0;
 
-const GAP: f32 = 57.0;
+const VERTICAL_GAP: f32 = 57.0;
 pub const PIPE_DV: f32 = 0.6;
 
 #[derive(Debug)]
@@ -36,8 +36,8 @@ impl PipeTracker {
 
     fn get_pipe_top(&mut self) -> f32 {
         self.pipes_seen += 1;
-        let noise = (self.randomFn.get([self.time as f64, self.time as f64]) as f32 + 1.0);
-        (GAP + 5.0) + noise * ((600.0 / 4.0) - (GAP * 2.0))
+        let noise = (self.random_fn.get([self.time as f64, self.time as f64]) as f32 + 1.0);
+        (VERTICAL_GAP + 5.0) + noise * ((600.0 / 4.0) - (VERTICAL_GAP * 2.0))
     }
 
     fn init_get_pipe_top(&mut self) -> f32 {
@@ -111,7 +111,7 @@ pub fn create_pipes(
     let space_width = width * SPACE_MULTIPLIER;
     let total_dist = (width + space_width) * (number_of_pipes as f32);
 
-    let gap = GAP;
+    let gap = VERTICAL_GAP;
     (0..number_of_pipes)
         .into_iter()
         .flat_map(|i| {
