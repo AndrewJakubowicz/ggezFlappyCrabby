@@ -78,9 +78,10 @@ fn create_pipe_bottom(
     pipe_top.sprite = Some(sprite_top);
     pipe_top.position = Point2::new(x, top);
     pipe_top.is_pipe = true;
+    let pipe_velocity = pipe_velocity();
     let pipe_top = pipe_top
         .scroller(total_dist)
-        .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0));
+        .set_velocity(pipe_velocity);
 
     let segments = SEGMENTS;
     let mut p = (0..segments)
@@ -93,7 +94,7 @@ fn create_pipe_bottom(
                 Point2::new(x, top + top_height + (sprite_base.height * (i as f32)));
             pipe_bottom
                 .scroller(total_dist)
-                .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0))
+                .set_velocity(pipe_velocity)
         })
         .collect::<Vec<Entity>>();
     p.push(pipe_top);
@@ -152,9 +153,10 @@ fn create_pipe_top(
     pipe_top.position = Point2::new(x, top);
     pipe_top.is_pipe = true;
     pipe_top.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+    let pipe_velocity = pipe_velocity();
     let pipe_top = pipe_top
         .scroller(total_dist)
-        .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0));
+        .set_velocity(pipe_velocity);
 
     let segments = SEGMENTS;
     let mut p = (0..segments)
@@ -167,9 +169,13 @@ fn create_pipe_top(
                 Point2::new(x, top - top_height - (sprite_base.height * (i as f32)));
             pipe_bottom
                 .scroller(total_dist)
-                .set_velocity(ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0))
+                .set_velocity(pipe_velocity)
         })
         .collect::<Vec<Entity>>();
     p.push(pipe_top);
     p
+}
+
+fn pipe_velocity() -> Vector2<f32> {
+    ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0)
 }
