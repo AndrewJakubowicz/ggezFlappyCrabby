@@ -74,30 +74,14 @@ fn create_pipe_bottom(
 ) -> Vec<Entity> {
     let top_height = sprite_top.height;
 
-    let mut pipe_top = Entity::new().add_physics(false);
-    pipe_top.sprite = Some(sprite_top);
-    pipe_top.position = Point2::new(x, top);
-    pipe_top.is_pipe = true;
-    let pipe_velocity = pipe_velocity();
-    let pipe_top = pipe_top
-        .scroller(total_dist)
-        .set_velocity(pipe_velocity);
-
+    let mut pipe_tip = create_pipe_tip(sprite_top, x, top).scroller(total_dist);
     let segments = SEGMENTS;
     let mut p = (0..segments)
         .into_iter()
-        .map(|i| {
-            let mut pipe_bottom = Entity::new().add_physics(false);
-            pipe_bottom.is_pipe = true;
-            pipe_bottom.sprite = Some(sprite_base.clone());
-            pipe_bottom.position =
-                Point2::new(x, top + top_height + (sprite_base.height * (i as f32)));
-            pipe_bottom
-                .scroller(total_dist)
-                .set_velocity(pipe_velocity)
-        })
+        .map(|i| make_pipe_body(&sprite_base, x, top, total_dist, top_height, 1.0 *(i as f32)))
         .collect::<Vec<Entity>>();
-    p.push(pipe_top);
+
+    p.push(pipe_tip);
     p
 }
 
@@ -144,38 +128,46 @@ fn create_pipe_top(
     total_dist: f32,
 ) -> Vec<Entity> {
     use crate::entity::ScoringPipe;
-    let top_height = sprite_top.height;
+    let top_height = -1.0 * sprite_top.height;
+    let mut sprite_top = sprite_top;
+    sprite_top.scale.y = -1.0;
 
-    let mut pipe_top = Entity::new().add_physics(false);
-    let mut sp_top = sprite_top;
-    sp_top.scale.y = -1.0;
-    pipe_top.sprite = Some(sp_top);
-    pipe_top.position = Point2::new(x, top);
-    pipe_top.is_pipe = true;
-    pipe_top.scoring_pipe = Some(ScoringPipe::ReadyToScore);
-    let pipe_velocity = pipe_velocity();
-    let pipe_top = pipe_top
-        .scroller(total_dist)
-        .set_velocity(pipe_velocity);
+    let mut pipe_tip = create_pipe_tip(sprite_top, x, top).scroller(total_dist);
+    pipe_tip.scoring_pipe = Some(ScoringPipe::ReadyToScore);
 
     let segments = SEGMENTS;
     let mut p = (0..segments)
         .into_iter()
-        .map(|i| {
-            let mut pipe_bottom = Entity::new().add_physics(false);
-            pipe_bottom.sprite = Some(sprite_base.clone());
-            pipe_bottom.is_pipe = true;
-            pipe_bottom.position =
-                Point2::new(x, top - top_height - (sprite_base.height * (i as f32)));
-            pipe_bottom
-                .scroller(total_dist)
-                .set_velocity(pipe_velocity)
-        })
+        .map(|i|
+            make_pipe_body(&sprite_base, x, top, total_dist, top_height, -1.0 *(i as f32))
+       )
         .collect::<Vec<Entity>>();
-    p.push(pipe_top);
+
+    p.push(pipe_tip);
     p
 }
 
 fn pipe_velocity() -> Vector2<f32> {
     ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0)
+}
+
+fn make_pipe_body(sprite_base: &Sprite, x: f32, top: f32, total_dist: f32, top_height: f32, i: f32) -> Entity {
+    let mut pipe_body = Entity::new().add_physics(false);
+    pipe_body.sprite = Some(sprite_base.clone());
+    pipe_body.is_pipe = true;
+    pipe_body.position =
+        Point2::new(x, top + top_height + (sprite_base.height * i));
+    pipe_body
+        .scroller(total_dist)
+        .set_velocity(pipe_velocity())
+}
+
+fn create_pipe_tip(sprite_top: Sprite, x: f32, top: f32) -> Entity {
+    let mut pipe_tip = Entity::new().add_physics(false);
+    pipe_tip.sprite = Some(sprite_top);
+    pipe_tip.position = Point2::new(x, top);
+    pipe_tip.is_pipe = true;
+    let pipe_tip = pipe_tip.set_velocity(pipe_velocity());
+
+    pipe_tip
 }
