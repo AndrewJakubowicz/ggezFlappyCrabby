@@ -11,7 +11,8 @@ const SEGMENTS: usize = 4;
 pub const TOTAL: usize = (SEGMENTS * 2) + 2;
 
 const PIPE_SPEED: f32 = 1.0;
-const SPACE_MULTIPLIER: f32 = 1.0;
+/// Distance between pipes relative to their width.
+const SPACE_MULTIPLIER: f32 = 1.5;
 
 const VERTICAL_GAP: f32 = 57.0;
 pub const VERTICAL_GAP_DEVIANCE: f32 = 0.6;
@@ -167,7 +168,5 @@ fn create_pipe_tip(sprite_top: Sprite, x: f32, top: f32) -> Entity {
     pipe_tip.sprite = Some(sprite_top);
     pipe_tip.position = Point2::new(x, top);
     pipe_tip.is_pipe = true;
-    let pipe_tip = pipe_tip.set_velocity(pipe_velocity());
-
-    pipe_tip
+    pipe_tip.set_velocity(pipe_velocity())
 }

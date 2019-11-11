@@ -139,7 +139,7 @@ impl Entity {
 
         // Self jumping script on the start screen.
         if self.is_player && self.physics.is_some() && state == PlayState::StartScreen {
-            self.auth_jump()
+            self.auto_jump()
         }
 
         if let Some(physics) = &mut self.physics {
@@ -228,7 +228,7 @@ impl Entity {
         Ok(())
     }
 
-    fn auth_jump(&mut self) -> () {
+    fn auto_jump(&mut self) -> () {
         if let Some(physics) = &mut self.physics {
             if self.position.y > 600.0 / 8.0 {
                 Entity::jump(physics);
