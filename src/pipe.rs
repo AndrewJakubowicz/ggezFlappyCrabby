@@ -21,7 +21,7 @@ pub struct PipeTracker {
     pipes_seen: usize,
     top: VecDeque<f32>,
     time: f32,
-    randomFn: Perlin,
+    random_fn: Perlin,
 }
 
 impl PipeTracker {
@@ -30,7 +30,7 @@ impl PipeTracker {
             pipes_seen: 1,
             top: VecDeque::new(),
             time: 0.0,
-            randomFn: Perlin::new(),
+            random_fn: Perlin::new(),
         }
     }
 
