@@ -151,21 +151,7 @@ impl Entity {
                 self.position += physics.velocity;
 
                 // prevent falling off the left side of the screen.
-                if let Some(scroll) = &self.scroller {
-                    if let Some(sprite) = &self.sprite {
-                        let right_pos = sprite.width + self.position.x;
-                        if right_pos < 0.0 {
-                            if self.is_pipe {
-                                let diff = pt.get_pipe_difference();
-                                self.position.y += diff;
-                            }
-                            if self.scoring_pipe.is_some() {
-                                self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
-                            }
-                            self.position.x += scroll.jump_distance;
-                        }
-                    }
-                }
+                self.prevent_falling_off_left(pt)
             }
 
             if self.is_player {
@@ -189,6 +175,25 @@ impl Entity {
         physics.acceleration = Vector2::new(0.0, -GRAVITY);
         physics.velocity = Vector2::new(0.0, -JUMP_IMPULSE);
     }
+
+    fn prevent_falling_off_left(&mut self, pt: &mut PipeTracker) {
+        if let Some(scroll) = &self.scroller {
+            if let Some(sprite) = &self.sprite {
+                let right_pos = sprite.width + self.position.x;
+                if right_pos < 0.0 {
+                    if self.is_pipe {
+                        let diff = pt.get_pipe_difference();
+                        self.position.y += diff;
+                    }
+                    if self.scoring_pipe.is_some() {
+                        self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+                    }
+                    self.position.x += scroll.jump_distance;
+                }
+            }
+        }
+    }
+
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
         if self.player_sprites.is_some() && self.physics.is_some() {
