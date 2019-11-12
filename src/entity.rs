@@ -3,7 +3,6 @@ use crate::pipe::PipeTracker;
 use ggez::event::EventHandler;
 use ggez::graphics;
 use ggez::graphics::spritebatch::SpriteBatch;
-use ggez::graphics::Image;
 use ggez::nalgebra::{Point2, Vector2};
 use ggez::Context;
 use ggez::GameResult;
@@ -35,7 +34,7 @@ struct Scroll {
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum ScoringPipe {
-    ready_to_score,
+    ReadyToScore,
     Scored,
 }
 
@@ -161,7 +160,7 @@ impl Entity {
                                 self.position.y += diff;
                             }
                             if self.scoring_pipe.is_some() {
-                                self.scoring_pipe = Some(ScoringPipe::ready_to_score);
+                                self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
                             }
                             self.position.x += scroll.jump_distance;
                         }
@@ -216,7 +215,7 @@ impl Entity {
             if let Some(s) = &mut self.sprite {
                 batch.add(s.add_draw_param(self.position.clone()));
                 if DEBUG {
-                    let mut rect = s.aabb();
+                    let rect = s.aabb();
                     let mesh = graphics::Mesh::new_rectangle(
                         ctx,
                         graphics::DrawMode::stroke(1.0),
@@ -244,9 +243,9 @@ impl Entity {
 
 /// Returns an f32 scaled [oldMin, oldMax] into the range [newMin, newMax]
 /// Thanks https://stackoverflow.com/a/5295202/6421793
-fn rescale_range(value: f32, oldMin: f32, oldMax: f32, newMin: f32, newMax: f32) -> f32 {
+fn rescale_range(value: f32, old_min: f32, old_max: f32, new_min: f32, new_max: f32) -> f32 {
     use ggez::nalgebra::clamp;
-    let old_range = oldMax - oldMin;
-    let new_range = newMax - newMin;
-    (((clamp(value, oldMin, oldMax) - oldMin) * new_range) / old_range) + newMin
+    let old_range = old_max - old_min;
+    let new_range = new_max - new_min;
+    (((clamp(value, old_min, old_max) - old_min) * new_range) / old_range) + new_min
 }

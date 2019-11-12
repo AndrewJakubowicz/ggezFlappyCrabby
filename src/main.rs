@@ -2,9 +2,8 @@ use atlas::Sprite;
 use ggez::nalgebra::{Point2, Vector2};
 use ggez::{
     audio::SoundSource,
-    conf::Conf,
     event::EventHandler,
-    graphics::{spritebatch::SpriteBatch, Drawable, Text},
+    graphics::{spritebatch::SpriteBatch, Text},
     Context,
     GameResult,
     graphics,
@@ -133,7 +132,7 @@ impl EventHandler for GameState {
                 for i in 0..other.len() {
                     {
                         let mut scored = false;
-                        if let Some(ScoringPipe::ready_to_score) = other[i].scoring_pipe {
+                        if let Some(ScoringPipe::ReadyToScore) = other[i].scoring_pipe {
                             if other[i].position.x < 20.0 {
                                 scored = true;
                             }

@@ -37,7 +37,7 @@ impl PipeTracker {
 
     fn get_pipe_top(&mut self) -> f32 {
         self.pipes_seen += 1;
-        let noise = (self.random_fn.get([self.time as f64, self.time as f64]) as f32 + 1.0);
+        let noise = self.random_fn.get([self.time as f64, self.time as f64]) as f32 + 1.0;
         (VERTICAL_GAP + 5.0) + noise * ((600.0 / 4.0) - (VERTICAL_GAP * 2.0))
     }
 
@@ -56,7 +56,7 @@ impl PipeTracker {
         let last_pos = self.top.front().expect("Pipe wasn't placed!").clone();
         let now_pos = self.get_pipe_top();
 
-        if (self.pipes_seen == 10) {
+        if self.pipes_seen == 10 {
             self.top.pop_front();
             self.top.push_back(now_pos);
             self.pipes_seen = 0;
@@ -75,7 +75,7 @@ fn create_pipe_bottom(
 ) -> Vec<Entity> {
     let top_height = sprite_top.height;
 
-    let mut pipe_tip = create_pipe_tip(sprite_top, x, top).scroller(total_dist);
+    let pipe_tip = create_pipe_tip(sprite_top, x, top).scroller(total_dist);
     let segments = SEGMENTS;
     let mut p = (0..segments)
         .into_iter()
@@ -134,7 +134,7 @@ fn create_pipe_top(
     sprite_top.scale.y = -1.0;
 
     let mut pipe_tip = create_pipe_tip(sprite_top, x, top).scroller(total_dist);
-    pipe_tip.scoring_pipe = Some(ScoringPipe::ready_to_score);
+    pipe_tip.scoring_pipe = Some(ScoringPipe::ReadyToScore);
 
     let segments = SEGMENTS;
     let mut p = (0..segments)
