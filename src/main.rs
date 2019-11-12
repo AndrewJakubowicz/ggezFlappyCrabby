@@ -5,7 +5,10 @@ use ggez::{
     conf::Conf,
     event::EventHandler,
     graphics::{spritebatch::SpriteBatch, Drawable, Text},
-    *,
+    Context,
+    GameResult,
+    graphics,
+    event
 };
 use rand::distributions::OpenClosed01;
 use rand::{thread_rng, Rng};
