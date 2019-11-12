@@ -220,7 +220,7 @@ fn create_player(sprite: Sprite, player_sprites: Vec<Sprite>) -> Entity {
     let mut player = entity::Entity::new().add_physics(true);
     player.sprite = Some(sprite);
     player.is_player = true;
-    player.position = Point2::new(40.0, -16.0);
+    player.position = Point2::new(40.0, entity::SCREEN_TOP);
     player.player_sprites = Some(player_sprites);
     player
 }

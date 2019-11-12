@@ -12,7 +12,7 @@ const DEBUG: bool = false;
 
 const GRAVITY: f32 = 0.28;
 const JUMP_IMPULSE: f32 = 2.75;
-const SCREEN_TOP: f32 = -16.0;
+pub const SCREEN_TOP: f32 = -16.0;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 /// The current state of the game.
