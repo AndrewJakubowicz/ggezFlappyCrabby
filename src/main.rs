@@ -121,7 +121,7 @@ impl EventHandler for GameState {
                 if player.position.y > 1000.0 {
                     if self.play_state == PlayState::Play {
                         if let Some(p) = &mut player.physics {
-                            p.vel.y = -100.0;
+                            p.velocity.y = -100.0;
                         }
                         self.play_state = PlayState::Dead {
                             time: ggez::timer::time_since_start(ctx),
@@ -134,7 +134,7 @@ impl EventHandler for GameState {
                 for i in 0..other.len() {
                     {
                         let mut scored = false;
-                        if let Some(ScoringPipe::ReadyToScore) = other[i].scoring_pipe {
+                        if let Some(ScoringPipe::ready_to_score) = other[i].scoring_pipe {
                             if other[i].position.x < 20.0 {
                                 scored = true;
                             }

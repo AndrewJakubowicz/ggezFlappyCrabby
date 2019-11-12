@@ -12,6 +12,7 @@ const DEBUG: bool = false;
 
 const GRAVITY: f32 = 0.28;
 const JUMP_IMPULSE: f32 = 2.75;
+const SCREEN_TOP: f32 = -16.0;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 /// The current state of the game.
@@ -23,8 +24,8 @@ pub enum PlayState {
 
 /// The physics on the entity.
 pub struct Physics {
-    pub vel: Vector2<f32>,
-    acc: Vector2<f32>,
+    pub velocity: Vector2<f32>,
+    acceleration: Vector2<f32>,
     gravity: bool,
 }
 
@@ -34,7 +35,7 @@ struct Scroll {
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum ScoringPipe {
-    ReadyToScore,
+    ready_to_score,
     Scored,
 }
 
@@ -68,8 +69,8 @@ impl Entity {
     }
     pub fn add_physics(mut self, with_gravity: bool) -> Self {
         self.physics = Some(Physics {
-            vel: Vector2::new(0.0, 0.0),
-            acc: Vector2::new(0.0, 0.0),
+            velocity: Vector2::new(0.0, 0.0),
+            acceleration: Vector2::new(0.0, 0.0),
             gravity: with_gravity,
         });
         self
@@ -92,7 +93,7 @@ impl Entity {
 
     pub fn set_velocity(mut self, vel: Vector2<f32>) -> Self {
         if let Some(p) = &mut self.physics {
-            p.vel = vel;
+            p.velocity = vel;
         }
         self
     }
@@ -109,7 +110,7 @@ impl Entity {
         let mut state = state.clone();
 
         if let Some(physics) = &mut self.physics {
-            physics.acc = if physics.gravity {
+            physics.acceleration = if physics.gravity {
                 Vector2::new(0.0, GRAVITY)
             } else {
                 Vector2::new(0.0, 0.0)
@@ -144,11 +145,11 @@ impl Entity {
 
         if let Some(physics) = &mut self.physics {
             if !(PlayState::StartScreen == state && self.is_pipe) {
-                physics.acc.scale(1.0 / delta);
+                physics.acceleration.scale(1.0 / delta);
 
-                physics.vel += physics.acc;
-                physics.vel.scale(1.0 / delta);
-                self.position += physics.vel;
+                physics.velocity += physics.acceleration;
+                physics.velocity.scale(1.0 / delta);
+                self.position += physics.velocity;
 
                 // prevent falling off the left side of the screen.
                 if let Some(scroll) = &self.scroller {
@@ -160,7 +161,7 @@ impl Entity {
                                 self.position.y += diff;
                             }
                             if self.scoring_pipe.is_some() {
-                                self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+                                self.scoring_pipe = Some(ScoringPipe::ready_to_score);
                             }
                             self.position.x += scroll.jump_distance;
                         }
@@ -170,20 +171,24 @@ impl Entity {
 
             if self.is_player {
                 // clamp y to not go above the top of the screen easily.
-                self.position.y = if self.position.y < -16.0 {
-                    -16.0
-                } else {
-                    self.position.y
-                }
+                self.prevent_going_off();
             }
         }
 
         (Ok(()), state)
     }
 
+    fn prevent_going_off(&mut self) -> () {
+        self.position.y = if self.position.y < SCREEN_TOP {
+            SCREEN_TOP
+        } else {
+            self.position.y
+        }
+    }
+
     fn jump(physics: &mut Physics) {
-        physics.acc = Vector2::new(0.0, -GRAVITY);
-        physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
+        physics.acceleration = Vector2::new(0.0, -GRAVITY);
+        physics.velocity = Vector2::new(0.0, -JUMP_IMPULSE);
     }
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
@@ -191,8 +196,8 @@ impl Entity {
             if let Some(s) = &mut self.player_sprites {
                 if let Some(p) = &self.physics {
                     // need velocity to map to these rotations between -0.2 and 0.2!
-                    let angle = rescale_range(p.vel.y, -7.0, 7.0, -0.6, 0.6);
-                    if p.vel.y < 0.0 {
+                    let angle = rescale_range(p.velocity.y, -7.0, 7.0, -0.6, 0.6);
+                    if p.velocity.y < 0.0 {
                         batch.add(
                             s[0].add_draw_param(self.position.clone())
                                 .offset(Point2::new(0.5, 0.5))

@@ -134,7 +134,7 @@ fn create_pipe_top(
     sprite_top.scale.y = -1.0;
 
     let mut pipe_tip = create_pipe_tip(sprite_top, x, top).scroller(total_dist);
-    pipe_tip.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+    pipe_tip.scoring_pipe = Some(ScoringPipe::ready_to_score);
 
     let segments = SEGMENTS;
     let mut p = (0..segments)
