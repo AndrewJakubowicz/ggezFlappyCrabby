@@ -13,8 +13,10 @@ mod entity;
 use entity::Entity;
 mod atlas;
 mod pipe;
+mod audio;
 use entity::{PlayState, ScoringPipe};
 use pipe::{create_pipes, PipeTracker};
+use audio::{Player};
 
 struct GameState {
     /// Array of entities.
@@ -29,9 +31,7 @@ struct GameState {
     atlas: atlas::Atlas,
     score: i128,
     best_score: i128,
-    score_sound: ggez::audio::Source,
-    ouch_sound: ggez::audio::Source,
-    begin_sound: ggez::audio::Source,
+    sound_player: audio::Player,
 }
 
 impl GameState {
@@ -41,11 +41,9 @@ impl GameState {
         let mut pipe_tracker = pipe::PipeTracker::new();
         let sprites =
             atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
-        let sound = audio::Source::new(ctx, "/score_point.wav").unwrap();
-        let ouch = audio::Source::new(ctx, "/ouch.wav").unwrap();
-        let mut begin_sound = audio::Source::new(ctx, "/begin_game.wav").unwrap();
+        let mut sound_player = Player::new(ctx);
 
-        begin_sound.play_detached();
+        sound_player.begin();
 
         Self {
             entities: GameState::create_start_entities(&sprites, &mut pipe_tracker),
@@ -55,9 +53,7 @@ impl GameState {
             atlas: sprites,
             score: 0,
             best_score: 0,
-            score_sound: sound,
-            ouch_sound: ouch,
-            begin_sound: begin_sound,
+            sound_player: sound_player
         }
     }
 
@@ -83,7 +79,7 @@ impl GameState {
     }
 
     fn restart(&mut self) {
-        self.begin_sound.play_detached();
+        self.sound_player.begin();
         let mut pt = PipeTracker::new();
         let entities = GameState::create_start_entities(&self.atlas, &mut pt);
         self.pt = pt;
@@ -143,8 +139,8 @@ impl EventHandler for GameState {
                             other[i].scoring_pipe = Some(ScoringPipe::Scored);
                             self.score += 1;
                             let pitch: f32 = thread_rng().sample(OpenClosed01);
-                            self.score_sound.set_pitch(1.0 + pitch);
-                            self.score_sound.play_detached();
+                            self.sound_player.score_sound.set_pitch(1.0 + pitch);
+                            self.sound_player.score();
                         }
                     }
                     if other[i].sprite.is_none() {
@@ -154,7 +150,7 @@ impl EventHandler for GameState {
                     other_rect.move_to(other[i].position.clone());
                     if other_rect.overlaps(&player_rect) {
                         if self.play_state == PlayState::Play {
-                            self.ouch_sound.play_detached();
+                            self.sound_player.ouch();
                             self.play_state = PlayState::Dead {
                                 time: ggez::timer::time_since_start(ctx),
                             };
