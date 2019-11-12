@@ -177,23 +177,24 @@ impl Entity {
     }
 
     fn prevent_falling_off_left(&mut self, pt: &mut PipeTracker) {
-        if let Some(scroll) = &self.scroller {
-            if let Some(sprite) = &self.sprite {
-                let right_pos = sprite.width + self.position.x;
-                if right_pos < 0.0 {
-                    if self.is_pipe {
-                        let diff = pt.get_pipe_difference();
-                        self.position.y += diff;
-                    }
-                    if self.scoring_pipe.is_some() {
-                        self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
-                    }
-                    self.position.x += scroll.jump_distance;
-                }
-            }
+        if self.scroller.as_ref().is_none() || self.sprite.as_ref().is_none() {
+            return ;
         }
+        let scroll = self.scroller.as_ref().unwrap();
+        let sprite = self.sprite.as_ref().unwrap();
+        let right_pos = sprite.width + self.position.x;
+        if right_pos >= 0.0 {
+            return ;
+        }
+        if self.is_pipe {
+            let diff = pt.get_pipe_difference();
+            self.position.y += diff;
+        }
+        if self.scoring_pipe.is_some() {
+            self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+        }
+        self.position.x += scroll.jump_distance;
     }
-
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
         if self.player_sprites.is_some() && self.physics.is_some() {
