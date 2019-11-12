@@ -26,7 +26,7 @@ struct GameState {
     /// Drawn in order.
     entities: Vec<Entity>,
     /// The sprite batch of all the images
-    spritebatch: SpriteBatch,
+    sprite_batch: SpriteBatch,
     /// The struct that moves the pipes around :)
     /// Can use any function over time between 0 and 600/16
     pt: PipeTracker,
@@ -50,7 +50,7 @@ impl GameState {
 
         Self {
             entities: GameState::create_start_entities(&sprites, &mut pipe_tracker),
-            spritebatch,
+            sprite_batch: spritebatch,
             pt: pipe_tracker,
             play_state: PlayState::StartScreen,
             atlas: sprites,
@@ -168,13 +168,13 @@ impl EventHandler for GameState {
         graphics::clear(ctx, graphics::Color::from_rgb(112, 216, 255));
 
         for i in 0..self.entities.len() {
-            self.entities[i].draw(ctx, &mut self.spritebatch)?;
+            self.entities[i].draw(ctx, &mut self.sprite_batch)?;
         }
 
         let p = graphics::DrawParam::new().scale(Vector2::new(4.0, 4.0));
         {
-            graphics::draw(ctx, &mut self.spritebatch, p);
-            self.spritebatch.clear();
+            graphics::draw(ctx, &mut self.sprite_batch, p);
+            self.sprite_batch.clear();
         }
 
         let fps_display = Text::new(format!(
