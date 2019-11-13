@@ -1,7 +1,6 @@
 use ggez::graphics::{self};
 use ggez::nalgebra::{Point2, Vector2};
 use serde::{Deserialize, Serialize};
-use serde_json::{Result, Value};
 use std::path::Path;
 
 #[derive(Deserialize, Debug)]
