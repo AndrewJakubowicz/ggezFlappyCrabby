@@ -19,6 +19,10 @@ mod audio;
 use entity::{PlayState, ScoringPipe};
 use pipe::{create_pipes, PipeTracker};
 use audio::{Player};
+use ggez::graphics::Rect;
+use std::time::Duration;
+
+const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
 
 struct GameState {
     /// Array of entities.
@@ -97,14 +101,7 @@ impl GameState {
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         let state = self.play_state.clone();
-        match state {
-            PlayState::Dead { time } => {
-                if (ggez::timer::time_since_start(ctx) - time) > std::time::Duration::from_secs(1) {
-                    self.restart()
-                }
-            }
-            _ => {}
-        }
+        self.handle_loosing(ctx, state);
         for i in 0..self.entities.len() {
             let (result, state) = self.entities[i].update(ctx, &mut self.pt, &self.play_state);
             result?;
@@ -116,6 +113,7 @@ impl EventHandler for GameState {
         // TODO: Another loop to check if player is dead.
         {
             if let Some((player, other)) = self.entities.split_last_mut() {
+                /*
                 if player.position.y > 1000.0 {
                     if self.play_state == PlayState::Play {
                         if let Some(p) = &mut player.physics {
@@ -126,6 +124,7 @@ impl EventHandler for GameState {
                         };
                     }
                 }
+                */
                 // Check player against others.
                 let mut player_rect = player.get_bounds();
                 player_rect.move_to(player.position.clone());
@@ -137,7 +136,7 @@ impl EventHandler for GameState {
                                 scored = true;
                             }
                         }
-                        if scored && self.play_state == PlayState::Play {
+                        if scored && PlayState::is_playing(&self.play_state) {
                             other[i].scoring_pipe = Some(ScoringPipe::Scored);
                             self.score += 1;
                             let pitch: f32 = thread_rng().sample(OpenClosed01);
@@ -151,7 +150,7 @@ impl EventHandler for GameState {
                     let mut other_rect = other[i].get_bounds();
                     other_rect.move_to(other[i].position.clone());
                     if other_rect.overlaps(&player_rect) {
-                        if self.play_state == PlayState::Play {
+                        if PlayState::is_playing(&self.play_state) {
                             self.sound_player.ouch();
                             self.play_state = PlayState::Dead {
                                 time: ggez::timer::time_since_start(ctx),
@@ -243,4 +242,23 @@ fn create_tiles(sprite: Sprite) -> Vec<Entity> {
         .into_iter()
         .map(|i| create_tile_scroll(sprite.clone(), (i as f32) * (width as f32), total_dist))
         .collect()
+}
+
+impl GameState {
+    fn handle_loosing(&mut self, ctx: &mut Context, state: PlayState) {
+        match state {
+            PlayState::Dead { time } => {
+                if (ggez::timer::time_since_start(ctx) - time) > RESTART_AFTER {
+                    self.restart()
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+impl PlayState {
+    fn is_playing(play_state : &PlayState) -> bool {
+        *play_state == PlayState::Play
+    }
 }
