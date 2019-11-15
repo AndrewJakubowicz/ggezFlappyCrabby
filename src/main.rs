@@ -15,13 +15,16 @@ mod entity;
 use entity::Entity;
 mod atlas;
 mod pipe;
+mod crab;
 mod audio;
 use entity::{PlayState, ScoringPipe};
 use pipe::{create_pipes, PipeTracker};
 use audio::{Player};
 use ggez::graphics::Rect;
 use std::time::Duration;
+use crab::create_player;
 
+const NUMBER_OF_TILES: u8 = 14;
 const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
 
 struct GameState {
@@ -68,10 +71,8 @@ impl GameState {
         sprites: &atlas::Atlas,
         pipe_tracker: &mut PipeTracker,
     ) -> Vec<Entity> {
-        let crab0 = sprites.create_sprite("crab0.png");
-        let crab1 = sprites.create_sprite("crab1.png");
         let floor_tile = sprites.create_sprite("floor_tile.png");
-        let player = create_player(crab0.clone(), vec![crab0, crab1]);
+        let player = create_player(sprites);
         let mut entities = create_tiles(floor_tile);
         let pipes = create_pipes(
             sprites.create_sprite("pipe_bottom.png"),
@@ -87,14 +88,17 @@ impl GameState {
     fn restart(&mut self) {
         self.sound_player.begin();
         let mut pt = PipeTracker::new();
-        let entities = GameState::create_start_entities(&self.atlas, &mut pt);
+        self.entities = GameState::create_start_entities(&self.atlas, &mut pt);
         self.pt = pt;
-        self.entities = entities;
         self.play_state = PlayState::StartScreen;
+        self.swap_scores();
+        self.score = 0;
+    }
+
+    fn swap_scores(&mut self) {
         if self.score > self.best_score {
             self.best_score = self.score;
         }
-        self.score = 0;
     }
 }
 
@@ -217,15 +221,6 @@ fn main() {
     event::run(ctx, event_loop, &mut state).unwrap();
 }
 
-fn create_player(sprite: Sprite, player_sprites: Vec<Sprite>) -> Entity {
-    let mut player = entity::Entity::new().add_physics(true);
-    player.sprite = Some(sprite);
-    player.is_player = true;
-    player.position = Point2::new(40.0, entity::SCREEN_TOP);
-    player.player_sprites = Some(player_sprites);
-    player
-}
-
 fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Entity {
     let mut tile = entity::Entity::new().add_physics(false);
     tile.sprite = Some(sprite);
@@ -235,12 +230,11 @@ fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Entity {
 }
 
 fn create_tiles(sprite: Sprite) -> Vec<Entity> {
-    let number_of_tiles = 14;
     let width = sprite.width;
-    let total_dist = width * (number_of_tiles as f32);
-    (0..number_of_tiles)
+    let total_dist = width * (NUMBER_OF_TILES as f32);
+    (0..NUMBER_OF_TILES)
         .into_iter()
-        .map(|i| create_tile_scroll(sprite.clone(), (i as f32) * (width as f32), total_dist))
+        .map(|i| create_tile_scroll(sprite.clone(), (i as f32) * width, total_dist))
         .collect()
 }
 
