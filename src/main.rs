@@ -17,6 +17,7 @@ mod atlas;
 mod pipe;
 mod crab;
 mod audio;
+mod window;
 use entity::{PlayState, ScoringPipe};
 use pipe::{create_pipes, PipeTracker};
 use audio::{Player};
@@ -192,18 +193,9 @@ impl EventHandler for GameState {
 }
 
 fn main() {
-    use ggez::conf::*;
     let resource_dir = std::path::PathBuf::from("./resources");
 
-    let cb = ggez::ContextBuilder::new("FlappyCrab", "youCodeThings")
-        .add_resource_path(resource_dir)
-        .window_setup(
-            WindowSetup::default()
-                .title("Flappy Crab (/)(;,,;)(/)!!!")
-                .samples(NumSamples::Zero)
-                .vsync(true),
-        )
-        .window_mode(WindowMode::default().dimensions(800.0, 600.0));
+    let cb = window::build_window(resource_dir);
 
     let (ctx, event_loop) = &mut cb.build().expect("Failed to build ggez!");
 
