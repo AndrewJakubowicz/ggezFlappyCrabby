@@ -153,13 +153,11 @@ impl EventHandler for GameState {
                     }
                     let mut other_rect = other[i].get_bounds();
                     other_rect.move_to(other[i].position.clone());
-                    if other_rect.overlaps(&player_rect) {
-                        if PlayState::is_playing(&self.play_state) {
-                            self.sound_player.ouch();
-                            self.play_state = PlayState::Dead {
-                                time: ggez::timer::time_since_start(ctx),
-                            };
-                        }
+                    if other_rect.overlaps(&player_rect) && PlayState::is_playing(&self.play_state) {
+                        self.sound_player.ouch();
+                        self.play_state = PlayState::Dead {
+                            time: ggez::timer::time_since_start(ctx),
+                        };
                     }
                 }
             }
