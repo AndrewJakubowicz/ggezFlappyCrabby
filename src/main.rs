@@ -49,9 +49,7 @@ impl GameState {
         let mut pipe_tracker = pipe::PipeTracker::new();
         let sprites =
             atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
-        let mut sound_player = Player::new(ctx);
-
-        sound_player.begin();
+        let sound_player = Player::new(ctx);
 
         Self {
             entities: GameState::create_start_entities(&sprites, &mut pipe_tracker),
@@ -215,6 +213,7 @@ fn main() {
 
     let mut state = GameState::new(ctx, batch);
 
+    state.sound_player.begin();
     event::run(ctx, event_loop, &mut state).unwrap();
 }
 
