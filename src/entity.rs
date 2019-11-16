@@ -101,7 +101,7 @@ impl Entity {
     pub fn update(
         &mut self,
         ctx: &mut Context,
-        pt: &mut PipeTracker,
+        pipe_tracker: &mut PipeTracker,
         state: &PlayState,
     ) -> (GameResult, PlayState) {
         let delta = ggez::timer::delta(ctx).as_nanos() as f32;
@@ -150,7 +150,7 @@ impl Entity {
                 self.position += physics.velocity;
 
                 // prevent falling off the left side of the screen.
-                self.prevent_falling_off_left(pt)
+                self.prevent_falling_off_left(pipe_tracker)
             }
 
             if self.is_player {
@@ -175,7 +175,7 @@ impl Entity {
         physics.velocity = Vector2::new(0.0, -JUMP_IMPULSE);
     }
 
-    fn prevent_falling_off_left(&mut self, pt: &mut PipeTracker) {
+    fn prevent_falling_off_left(&mut self, pipe_tracker: &mut PipeTracker) {
         if self.scroller.as_ref().is_none() || self.sprite.as_ref().is_none() {
             return ;
         }
@@ -186,8 +186,7 @@ impl Entity {
             return ;
         }
         if self.is_pipe {
-            let diff = pt.get_pipe_difference();
-            self.position.y += diff;
+            self.position.y += pipe_tracker.get_pipe_difference();
         }
         if self.scoring_pipe.is_some() {
             self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
@@ -201,19 +200,16 @@ impl Entity {
                 if let Some(p) = &self.physics {
                     // need velocity to map to these rotations between -0.2 and 0.2!
                     let angle = rescale_range(p.velocity.y, -7.0, 7.0, -0.6, 0.6);
-                    if p.velocity.y < 0.0 {
-                        batch.add(
-                            s[0].add_draw_param(self.position.clone())
-                                .offset(Point2::new(0.5, 0.5))
-                                .rotation(angle),
-                        );
+                    let mut x = if p.velocity.y < 0.0 {
+                        &mut s[0]
                     } else {
-                        batch.add(
-                            s[1].add_draw_param(self.position.clone())
-                                .offset(Point2::new(0.5, 0.5))
-                                .rotation(angle),
-                        );
-                    }
+                        &mut s[1]
+                    };
+                    batch.add(
+                        x.add_draw_param(self.position.clone())
+                            .offset(Point2::new(0.5, 0.5))
+                            .rotation(angle),
+                    );
                 }
             }
         } else {
