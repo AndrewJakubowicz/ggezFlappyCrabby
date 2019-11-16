@@ -34,7 +34,7 @@ struct GameState {
     sprite_batch: SpriteBatch,
     /// The struct that moves the pipes around :)
     /// Can use any function over time between 0 and 600/16
-    pt: PipeTracker,
+    pipe_tracker: PipeTracker,
     play_state: PlayState,
     atlas: atlas::Atlas,
     score: i128,
@@ -56,7 +56,7 @@ impl GameState {
         Self {
             entities: GameState::create_start_entities(&sprites, &mut pipe_tracker),
             sprite_batch: spritebatch,
-            pt: pipe_tracker,
+            pipe_tracker: pipe_tracker,
             play_state: PlayState::StartScreen,
             atlas: sprites,
             score: 0,
@@ -88,7 +88,7 @@ impl GameState {
         self.sound_player.begin();
         let mut pt = PipeTracker::new();
         self.entities = GameState::create_start_entities(&self.atlas, &mut pt);
-        self.pt = pt;
+        self.pipe_tracker = pt;
         self.play_state = PlayState::StartScreen;
         self.swap_scores();
         self.score = 0;
@@ -106,7 +106,7 @@ impl EventHandler for GameState {
         let state = self.play_state.clone();
         self.handle_losing(ctx, state);
         for i in 0..self.entities.len() {
-            let (result, state) = self.entities[i].update(ctx, &mut self.pt, &self.play_state);
+            let (result, state) = self.entities[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
             result?;
             if self.play_state != PlayState::Play && state == PlayState::Play {
                 self.play_state = PlayState::Play;
