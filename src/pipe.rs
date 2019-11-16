@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 const NUM_PIPES: usize = 4;
 const SEGMENTS: usize = 4;
 /// Count total segments. The pipe lengths and tops.
-pub const TOTAL: usize = (SEGMENTS * 2) + 2;
+//pub const TOTAL: usize = (SEGMENTS * 2) + 2;
 
 const PIPE_SPEED: f32 = 1.0;
 /// Distance between pipes relative to their width.

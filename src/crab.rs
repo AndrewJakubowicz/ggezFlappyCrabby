@@ -1,10 +1,4 @@
-use atlas::Sprite;
-use ggez::nalgebra::{Point2, Vector2};
-use rand::distributions::OpenClosed01;
-use rand::{thread_rng, Rng};
-use entity::{PlayState, ScoringPipe};
-use ggez::graphics::Rect;
-use std::time::Duration;
+use ggez::nalgebra::Point2;
 use crate::{atlas, entity};
 use crate::entity::Entity;
 

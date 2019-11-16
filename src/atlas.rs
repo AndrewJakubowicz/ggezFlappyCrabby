@@ -1,6 +1,6 @@
 use ggez::graphics::{self};
 use ggez::nalgebra::{Point2, Vector2};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use std::path::Path;
 
 #[derive(Deserialize, Debug)]

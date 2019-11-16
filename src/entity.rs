@@ -1,6 +1,5 @@
 use crate::atlas::Sprite;
 use crate::pipe::PipeTracker;
-use ggez::event::EventHandler;
 use ggez::graphics;
 use ggez::graphics::spritebatch::SpriteBatch;
 use ggez::nalgebra::{Point2, Vector2};

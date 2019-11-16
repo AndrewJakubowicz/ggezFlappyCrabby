@@ -20,7 +20,6 @@ mod audio;
 use entity::{PlayState, ScoringPipe};
 use pipe::{create_pipes, PipeTracker};
 use audio::{Player};
-use ggez::graphics::Rect;
 use std::time::Duration;
 use crab::create_player;
 
