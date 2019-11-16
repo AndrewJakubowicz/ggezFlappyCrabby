@@ -199,14 +199,19 @@ fn main() {
 
     let (ctx, event_loop) = &mut cb.build().expect("Failed to build ggez!");
 
-    let image = graphics::Image::new(ctx, "/texture_atlas.png").unwrap();
-    let mut batch = graphics::spritebatch::SpriteBatch::new(image);
-    batch.set_filter(graphics::FilterMode::Nearest);
+    let batch = create_batch(ctx);
 
     let mut state = GameState::new(ctx, batch);
 
     state.sound_player.begin();
     event::run(ctx, event_loop, &mut state).unwrap();
+}
+
+fn create_batch(ctx: &mut Context) -> SpriteBatch {
+    let image = graphics::Image::new(ctx, "/texture_atlas.png").unwrap();
+    let mut batch = graphics::spritebatch::SpriteBatch::new(image);
+    batch.set_filter(graphics::FilterMode::Nearest);
+    batch
 }
 
 fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Entity {
