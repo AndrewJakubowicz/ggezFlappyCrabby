@@ -103,7 +103,7 @@ impl GameState {
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         let state = self.play_state.clone();
-        self.handle_losing(ctx, state);
+        self.handle_after_losing(ctx, state);
         for i in 0..self.entities.len() {
             let (result, state) = self.entities[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
             result?;
@@ -162,6 +162,7 @@ impl EventHandler for GameState {
         }
         Ok(())
     }
+
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::Color::from_rgb(112, 216, 255));
 
@@ -175,22 +176,14 @@ impl EventHandler for GameState {
             self.sprite_batch.clear();
         }
 
-        let fps_display = Text::new(format!(
-            "Best Score: {}   Current Score: {}",
-            self.best_score, self.score
-        ));
-
-        graphics::draw(
-            ctx,
-            &fps_display,
-            (Point2::new(10.0, 10.0), graphics::WHITE),
-        )?;
+        draw_scores(self.score, self.best_score, ctx);
 
         graphics::present(ctx)?;
         std::thread::yield_now();
         Ok(())
     }
 }
+
 
 fn main() {
     let resource_dir = std::path::PathBuf::from("./resources");
@@ -199,7 +192,7 @@ fn main() {
 
     let (ctx, event_loop) = &mut cb.build().expect("Failed to build ggez!");
 
-    let batch = create_batch(ctx);
+    let batch = create_batch_sprite(ctx);
 
     let mut state = GameState::new(ctx, batch);
 
@@ -207,7 +200,7 @@ fn main() {
     event::run(ctx, event_loop, &mut state).unwrap();
 }
 
-fn create_batch(ctx: &mut Context) -> SpriteBatch {
+fn create_batch_sprite(ctx: &mut Context) -> SpriteBatch {
     let image = graphics::Image::new(ctx, "/texture_atlas.png").unwrap();
     let mut batch = graphics::spritebatch::SpriteBatch::new(image);
     batch.set_filter(graphics::FilterMode::Nearest);
@@ -232,7 +225,7 @@ fn create_tiles(sprite: Sprite) -> Vec<Entity> {
 }
 
 impl GameState {
-    fn handle_losing(&mut self, ctx: &mut Context, state: PlayState) {
+    fn handle_after_losing(&mut self, ctx: &mut Context, state: PlayState) {
         match state {
             PlayState::Dead { time } => {
                 if (ggez::timer::time_since_start(ctx) - time) > RESTART_AFTER {
@@ -249,3 +242,17 @@ impl PlayState {
         *play_state == PlayState::Play
     }
 }
+
+fn draw_scores(score : i128, best_score: i128, ctx: &mut Context) {
+    let fps_display = Text::new(format!(
+        "Best Score: {}   Current Score: {}",
+        best_score, score
+    ));
+
+    graphics::draw(
+        ctx,
+        &fps_display,
+        (Point2::new(10.0, 10.0), graphics::WHITE),
+    );
+}
+
