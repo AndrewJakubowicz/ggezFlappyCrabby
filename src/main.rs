@@ -105,7 +105,7 @@ impl GameState {
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         let state = self.play_state.clone();
-        self.handle_loosing(ctx, state);
+        self.handle_losing(ctx, state);
         for i in 0..self.entities.len() {
             let (result, state) = self.entities[i].update(ctx, &mut self.pt, &self.play_state);
             result?;
@@ -239,7 +239,7 @@ fn create_tiles(sprite: Sprite) -> Vec<Entity> {
 }
 
 impl GameState {
-    fn handle_loosing(&mut self, ctx: &mut Context, state: PlayState) {
+    fn handle_losing(&mut self, ctx: &mut Context, state: PlayState) {
         match state {
             PlayState::Dead { time } => {
                 if (ggez::timer::time_since_start(ctx) - time) > RESTART_AFTER {
