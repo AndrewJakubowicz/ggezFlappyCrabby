@@ -77,7 +77,7 @@ impl Entity {
     // Panics if there isn't a sprite.
     pub fn get_bounds(&self) -> graphics::Rect {
         match &self.sprite {
-            Some(sprite) => sprite.aabb(),
+            Some(sprite) => sprite.get_bound_box(),
             None => unimplemented!("This is not implemented"),
         }
     }
@@ -216,7 +216,7 @@ impl Entity {
             if let Some(s) = &mut self.sprite {
                 batch.add(s.add_draw_param(self.position.clone()));
                 if DEBUG {
-                    let rect = s.aabb();
+                    let rect = s.get_bound_box();
                     let mesh = graphics::Mesh::new_rectangle(
                         ctx,
                         graphics::DrawMode::stroke(1.0),

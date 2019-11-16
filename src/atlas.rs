@@ -100,7 +100,7 @@ impl Sprite {
     }
 
     /// Returns the bounding box for this sprite.
-    pub fn aabb(&self) -> graphics::Rect {
+    pub fn get_bound_box(&self) -> graphics::Rect {
         let mut r = graphics::Rect::new(0.0, 0.0, self.width, self.height);
         r.scale(self.scale.x, self.scale.y);
         r
