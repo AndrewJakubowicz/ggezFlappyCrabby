@@ -153,8 +153,7 @@ fn pipe_velocity() -> Vector2<f32> {
 }
 
 fn make_pipe_body(sprite_base: &Sprite, x: f32, top: f32, total_dist: f32, top_height: f32, i: f32) -> Entity {
-    let mut pipe_body = Entity::new().add_physics(false);
-    pipe_body.sprite = Some(sprite_base.clone());
+    let mut pipe_body = Entity::new(false, sprite_base.clone());
     pipe_body.is_pipe = true;
     pipe_body.position =
         Point2::new(x, top + top_height + (sprite_base.height * i));
@@ -164,8 +163,7 @@ fn make_pipe_body(sprite_base: &Sprite, x: f32, top: f32, total_dist: f32, top_h
 }
 
 fn create_pipe_tip(sprite_top: Sprite, x: f32, top: f32) -> Entity {
-    let mut pipe_tip = Entity::new().add_physics(false);
-    pipe_tip.sprite = Some(sprite_top);
+    let mut pipe_tip = Entity::new(false, sprite_top);
     pipe_tip.position = Point2::new(x, top);
     pipe_tip.is_pipe = true;
     pipe_tip.set_velocity(pipe_velocity())

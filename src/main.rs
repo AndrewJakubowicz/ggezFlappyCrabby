@@ -146,9 +146,6 @@ impl EventHandler for GameState {
                             self.sound_player.score();
                         }
                     }
-                    if other[i].sprite.is_none() {
-                        continue;
-                    }
                     let mut other_rect = other[i].get_bounds();
                     other_rect.move_to(other[i].position.clone());
                     if other_rect.overlaps(&player_rect) && PlayState::is_playing(&self.play_state) {
@@ -208,8 +205,7 @@ fn create_batch_sprite(ctx: &mut Context) -> SpriteBatch {
 }
 
 fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Entity {
-    let mut tile = entity::Entity::new().add_physics(false);
-    tile.sprite = Some(sprite);
+    let mut tile = entity::Entity::new(false, sprite);
     tile.position = Point2::new(x, 145.0);
     tile.scroller(jump)
         .set_velocity(ggez::nalgebra::Vector2::new(-1.0, 0.0))

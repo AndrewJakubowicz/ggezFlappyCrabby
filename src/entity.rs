@@ -26,6 +26,15 @@ pub struct Physics {
     acceleration: Vector2<f32>,
     gravity: bool,
 }
+impl Physics {
+    fn new (with_gravity: bool) -> Self {
+        Self {
+            velocity: Vector2::new(0.0, 0.0),
+            acceleration: Vector2::new(0.0, 0.0),
+            gravity: with_gravity,
+        }
+    }
+}
 
 struct Scroll {
     jump_distance: f32,
@@ -38,11 +47,11 @@ pub enum ScoringPipe {
 }
 
 pub struct Entity {
-    pub sprite: Option<Sprite>,
+    pub sprite: Sprite,
     pub position: Point2<f32>,
     pub is_player: bool,
     can_jump: bool,
-    pub physics: Option<Physics>,
+    pub physics: Physics,
     scroller: Option<Scroll>,
     pub is_pipe: bool,
     pub player_sprites: Option<Vec<Sprite>>,
@@ -52,12 +61,12 @@ pub struct Entity {
 /// Everything that can be interacted with is an entity.
 /// The player is an entity, as well as the pipes.
 impl Entity {
-    pub fn new() -> Self {
+    pub fn new(with_gravity: bool, sprite: Sprite) -> Self {
         Self {
-            sprite: None,
+            sprite: sprite,
             position: Point2::new(0.0, 0.0),
             is_player: false,
-            physics: None,
+            physics: Physics::new(with_gravity),
             can_jump: true,
             scroller: None,
             is_pipe: false,
@@ -65,21 +74,10 @@ impl Entity {
             scoring_pipe: None,
         }
     }
-    pub fn add_physics(mut self, with_gravity: bool) -> Self {
-        self.physics = Some(Physics {
-            velocity: Vector2::new(0.0, 0.0),
-            acceleration: Vector2::new(0.0, 0.0),
-            gravity: with_gravity,
-        });
-        self
-    }
 
     // Panics if there isn't a sprite.
     pub fn get_bounds(&self) -> graphics::Rect {
-        match &self.sprite {
-            Some(sprite) => sprite.get_bound_box(),
-            None => unimplemented!("This is not implemented"),
-        }
+        self.sprite.get_bound_box()
     }
 
     pub fn scroller(mut self, dist: f32) -> Self {
@@ -90,9 +88,8 @@ impl Entity {
     }
 
     pub fn set_velocity(mut self, vel: Vector2<f32>) -> Self {
-        if let Some(p) = &mut self.physics {
-            p.velocity = vel;
-        }
+        self.physics.velocity = vel;
+
         self
     }
 }
@@ -107,17 +104,15 @@ impl Entity {
         let delta = ggez::timer::delta(ctx).as_nanos() as f32;
         let mut state = state.clone();
 
-        if let Some(physics) = &mut self.physics {
-            physics.acceleration = if physics.gravity {
-                Vector2::new(0.0, GRAVITY)
-            } else {
-                Vector2::new(0.0, 0.0)
-            };
-        }
+        let physics = &mut self.physics;
+        physics.acceleration = if physics.gravity {
+            Vector2::new(0.0, GRAVITY)
+        } else {
+            Vector2::new(0.0, 0.0)
+        };
 
-        if self.is_player
-            && self.physics.is_some()
-            && (state == PlayState::StartScreen || state == PlayState::Play)
+
+        if self.is_player && (state == PlayState::StartScreen || state == PlayState::Play)
         {
             use ggez::event::KeyCode;
             use ggez::input::keyboard;
@@ -126,9 +121,9 @@ impl Entity {
             }
 
             if keyboard::is_key_pressed(ctx, KeyCode::Space) && self.can_jump {
-                if let Some(physics) = &mut self.physics {
-                    Entity::jump(physics);
-                }
+                let physics = &mut self.physics;
+                Entity::jump(physics);
+
                 if state == PlayState::StartScreen {
                     state = PlayState::Play;
                 }
@@ -137,26 +132,25 @@ impl Entity {
         }
 
         // Self jumping script on the start screen.
-        if self.is_player && self.physics.is_some() && state == PlayState::StartScreen {
+        if self.is_player && state == PlayState::StartScreen {
             self.auto_jump()
         }
 
-        if let Some(physics) = &mut self.physics {
-            if !(PlayState::StartScreen == state && self.is_pipe) {
-                physics.acceleration.scale(1.0 / delta);
+        if !(PlayState::StartScreen == state && self.is_pipe) {
+            let physics = &mut self.physics;
+            physics.acceleration.scale(1.0 / delta);
 
-                physics.velocity += physics.acceleration;
-                physics.velocity.scale(1.0 / delta);
-                self.position += physics.velocity;
+            physics.velocity += physics.acceleration;
+            physics.velocity.scale(1.0 / delta);
+            self.position += physics.velocity;
 
-                // prevent falling off the left side of the screen.
-                self.prevent_falling_off_left(pipe_tracker)
-            }
+            // prevent falling off the left side of the screen.
+            self.prevent_falling_off_left(pipe_tracker)
+        }
 
-            if self.is_player {
-                // clamp y to not go above the top of the screen easily.
-                self.prevent_going_off();
-            }
+        if self.is_player {
+            // clamp y to not go above the top of the screen easily.
+            self.prevent_going_off();
         }
 
         (Ok(()), state)
@@ -176,11 +170,11 @@ impl Entity {
     }
 
     fn prevent_falling_off_left(&mut self, pipe_tracker: &mut PipeTracker) {
-        if self.scroller.as_ref().is_none() || self.sprite.as_ref().is_none() {
+        if self.scroller.as_ref().is_none() {
             return ;
         }
         let scroll = self.scroller.as_ref().unwrap();
-        let sprite = self.sprite.as_ref().unwrap();
+        let sprite = &self.sprite;
         let right_pos = sprite.width + self.position.x;
         if right_pos >= 0.0 {
             return ;
@@ -195,12 +189,12 @@ impl Entity {
     }
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
-        if self.player_sprites.is_some() && self.physics.is_some() {
+        if self.player_sprites.is_some() {
             if let Some(s) = &mut self.player_sprites {
-                if let Some(p) = &self.physics {
+                let p = &self.physics;
                     // need velocity to map to these rotations between -0.2 and 0.2!
                     let angle = rescale_range(p.velocity.y, -7.0, 7.0, -0.6, 0.6);
-                    let mut x = if p.velocity.y < 0.0 {
+                    let x = if p.velocity.y < 0.0 {
                         &mut s[0]
                     } else {
                         &mut s[1]
@@ -210,10 +204,10 @@ impl Entity {
                             .offset(Point2::new(0.5, 0.5))
                             .rotation(angle),
                     );
-                }
+
             }
         } else {
-            if let Some(s) = &mut self.sprite {
+            let s = &mut self.sprite; {
                 batch.add(s.add_draw_param(self.position.clone()));
                 if DEBUG {
                     let rect = s.get_bound_box();
@@ -234,10 +228,9 @@ impl Entity {
     }
 
     fn auto_jump(&mut self) -> () {
-        if let Some(physics) = &mut self.physics {
-            if self.position.y > 600.0 / 8.0 {
-                Entity::jump(physics);
-            }
+         let (physics) = &mut self.physics;
+        if self.position.y > 600.0 / 8.0 {
+            Entity::jump(physics);
         }
     }
 }
