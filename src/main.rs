@@ -45,7 +45,7 @@ struct GameState {
 impl GameState {
     /// Creates a new GameState
     /// Panics if can't access the sprite image resource.
-    fn new(ctx: &mut Context, spritebatch: SpriteBatch) -> Self {
+    fn new(ctx: &mut Context, sprite_batch: SpriteBatch) -> Self {
         let mut pipe_tracker = pipe::PipeTracker::new();
         let sprites =
             atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
@@ -53,13 +53,13 @@ impl GameState {
 
         Self {
             entities: GameState::create_start_entities(&sprites, &mut pipe_tracker),
-            sprite_batch: spritebatch,
-            pipe_tracker: pipe_tracker,
+            sprite_batch,
+            pipe_tracker,
             play_state: PlayState::StartScreen,
             atlas: sprites,
             score: 0,
             best_score: 0,
-            sound_player: sound_player
+            sound_player
         }
     }
 
@@ -110,7 +110,7 @@ impl EventHandler for GameState {
         for i in 0..self.entities.len() {
             let (result, state) = self.entities[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
             result?;
-            if self.play_state != PlayState::Play && state == PlayState::Play {
+            if !self.play_state.is_playing() && state == PlayState::Play {
                 self.play_state = PlayState::Play;
                 break;
             }
@@ -195,10 +195,9 @@ fn create_batch_sprite(ctx: &mut Context) -> SpriteBatch {
 }
 
 fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Box<Entity> {
-    let mut tile = entity::Entity::new(false, sprite);
-    tile.position = Point2::new(x, 145.0);
-    let tile = tile.scroller(jump)
-        .set_velocity(ggez::nalgebra::Vector2::new(-1.0, 0.0));
+    let mut tile = entity::Entity::new(false, sprite, x, 145.0);
+    let tile = tile.scroller(jump).set_velocity((-1.0, 0.0));
+
     Box::new(tile)
 }
 

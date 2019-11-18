@@ -1,5 +1,5 @@
 use crate::atlas::Sprite;
-use crate::pipe::PipeTracker;
+use crate::pipe::{PipeTracker, pipe_velocity};
 use ggez::graphics;
 use ggez::graphics::spritebatch::SpriteBatch;
 use ggez::nalgebra::{Point2, Vector2};
@@ -14,7 +14,7 @@ use rand::thread_rng;
 
 const DEBUG: bool = false;
 
-const GRAVITY: f32 = 0.28;
+const GRAVITY: f32 = 0.25;
 const JUMP_IMPULSE: f32 = 2.75;
 pub const SCREEN_TOP: f32 = -16.0;
 
@@ -65,52 +65,8 @@ pub struct Entity {
     pub scoring_pipe: Option<ScoringPipe>,
 }
 
-pub struct PipeEntity {
-    pub sprite: Sprite,
-    pub position: Point2<f32>,
-    pub is_player: bool,
-    can_jump: bool,
-    pub physics: Physics,
-    scroller: Option<Scroll>,
-    pub is_pipe: bool,
-    pub player_sprites: Option<Vec<Sprite>>,
-    pub scoring_pipe: Option<ScoringPipe>,
-}
 /// Everything that can be interacted with is an entity.
 /// The player is an entity, as well as the pipes.
-impl PipeEntity {
-    pub fn new(with_gravity: bool, sprite: Sprite) -> Self {
-        Self {
-            sprite: sprite,
-            position: Point2::new(0.0, 0.0),
-            is_player: false,
-            physics: Physics::new(with_gravity),
-            can_jump: true,
-            scroller: None,
-            is_pipe: true,
-            player_sprites: None,
-            scoring_pipe: None,
-        }
-    }
-
-    // Panics if there isn't a sprite.
-    pub fn get_bounds(&self) -> graphics::Rect {
-        self.sprite.get_bound_box()
-    }
-
-    pub fn scroller(mut self, dist: f32) -> Self {
-        self.scroller = Some(Scroll {
-            jump_distance: dist,
-        });
-        self
-    }
-
-    pub fn set_velocity(mut self, vel: Vector2<f32>) -> Self {
-        self.physics.velocity = vel;
-
-        self
-    }
-}
 pub trait GameEntity {
     fn update(&mut self, ctx: &mut Context, pipe_tracker: &mut PipeTracker, state: &PlayState) -> (GameResult, PlayState);
     fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult;
@@ -121,10 +77,10 @@ pub trait GameEntity {
 /// Everything that can be interacted with is an entity.
 /// The player is an entity, as well as the pipes.
 impl Entity {
-    pub fn new(with_gravity: bool, sprite: Sprite) -> Self {
+    pub fn new(with_gravity: bool, sprite: Sprite, x: f32, y: f32) -> Self {
         Self {
             sprite: sprite,
-            position: Point2::new(0.0, 0.0),
+            position: Point2::new(x, y),
             is_player: false,
             physics: Physics::new(with_gravity),
             can_jump: true,
@@ -133,6 +89,13 @@ impl Entity {
             player_sprites: None,
             scoring_pipe: None,
         }
+    }
+
+    pub fn newPipe (sprite: Sprite, x: f32, y: f32) -> Self {
+        let mut pipe = Self::new(false, sprite, x, y);
+        pipe.is_pipe = true;
+
+        pipe.set_velocity(pipe_velocity())
     }
 
     // Panics if there isn't a sprite.
@@ -160,8 +123,8 @@ impl Entity {
         self
     }
 
-    pub fn set_velocity(mut self, vel: Vector2<f32>) -> Self {
-        self.physics.velocity = vel;
+    pub fn set_velocity(mut self, vel: (f32, f32)) -> Self {
+        self.physics.velocity = ggez::nalgebra::Vector2::new(vel.0, vel.1);
 
         self
     }

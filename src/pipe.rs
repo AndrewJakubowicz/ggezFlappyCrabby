@@ -149,27 +149,17 @@ fn create_pipe_top(
     p
 }
 
-fn pipe_velocity() -> Vector2<f32> {
-    ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0)
+pub fn pipe_velocity() -> (f32, f32) {
+    (-PIPE_SPEED, 0.0)
 }
 
 fn make_pipe_body(sprite_base: &Sprite, x: f32, top: f32, total_dist: f32, top_height: f32, i: f32) -> Box<Entity> {
-    let mut pipe_body = Entity::new(false, sprite_base.clone());
-    pipe_body.is_pipe = true;
-    pipe_body.position =
-        Point2::new(x, top + top_height + (sprite_base.height * i));
-    pipe_body = pipe_body
-        .scroller(total_dist)
-        .set_velocity(pipe_velocity());
+    let top = top + top_height + (sprite_base.height * i);
+    let mut pipe_body = Entity::newPipe(sprite_base.clone(), x, top);
+    pipe_body = pipe_body.scroller(total_dist);
     Box::new(pipe_body)
 }
 
 fn create_pipe_tip(sprite_top: Sprite, x: f32, top: f32) -> Entity {
-    let mut pipe_tip = Entity::new(false, sprite_top);
-    pipe_tip.position = Point2::new(x, top);
-    pipe_tip.is_pipe = true;
-    pipe_tip.set_velocity(pipe_velocity())
-//    ;
-
-//    Box::new(pipe_tip)
+    Entity::newPipe(sprite_top, x, top)
 }
