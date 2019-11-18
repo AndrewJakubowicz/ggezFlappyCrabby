@@ -9,8 +9,6 @@ use ggez::{
     graphics,
     event
 };
-use rand::distributions::OpenClosed01;
-use rand::{thread_rng, Rng};
 mod entity;
 use entity::Entity;
 mod atlas;
@@ -63,6 +61,10 @@ impl GameState {
             best_score: 0,
             sound_player: sound_player
         }
+    }
+
+    fn is_playing (&self) -> bool {
+        self.play_state.is_playing()
     }
 
     /// The last entity *must* be the player.
@@ -157,18 +159,14 @@ fn update_it(game: &mut GameState, ctx: &mut Context) {
 
         for i in 0..other.len() {
 
-            if other[i].set_score(&game.play_state) {
+            if other[i].set_scored(&game.play_state) {
                 game.score += 1;
-                let pitch: f32 = thread_rng().sample(OpenClosed01);
-                game.sound_player.score_sound.set_pitch(1.0 + pitch);
                 game.sound_player.score();
             }
 
-            if player.overlaps(&other[i]) && PlayState::is_playing(&game.play_state) {
+            if player.overlaps(&other[i]) && game.play_state.is_playing() {
                 game.sound_player.ouch();
-                game.play_state = PlayState::Dead {
-                    time: ggez::timer::time_since_start(ctx),
-                };
+                game.play_state.set_dead(ggez::timer::time_since_start(ctx));
             }
         }
     }
@@ -227,8 +225,14 @@ impl GameState {
 }
 
 impl PlayState {
-    fn is_playing(play_state : &PlayState) -> bool {
-        *play_state == PlayState::Play
+    fn is_playing(&self) -> bool {
+        *self == PlayState::Play
+    }
+
+    fn set_dead (&mut self, time : std::time::Duration) {
+        *self = PlayState::Dead {
+            time
+        }
     }
 }
 

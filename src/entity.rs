@@ -313,7 +313,7 @@ impl Entity {
         other_rect.overlaps(&player_rect)
     }
 
-    pub fn set_score (&mut self, play_state : &PlayState) -> bool {
+    pub fn set_scored(&mut self, play_state : &PlayState) -> bool {
         let scored = self.get_scored();
 
         if scored && PlayState::is_playing(&play_state) {
