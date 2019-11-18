@@ -1,4 +1,4 @@
-use crate::entity::Entity;
+use crate::entity::{Entity, GameEntity};
 use crate::Sprite;
 use ggez::nalgebra::{Point2, Vector2};
 use noise::NoiseFn;
@@ -72,7 +72,7 @@ fn create_pipe_bottom(
     x: f32,
     top: f32,
     total_dist: f32,
-) -> Vec<Entity> {
+) -> Vec<Box<Entity>> {
     let top_height = sprite_top.height;
 
     let pipe_tip = create_pipe_tip(sprite_top, x, top).scroller(total_dist);
@@ -80,9 +80,9 @@ fn create_pipe_bottom(
     let mut p = (0..segments)
         .into_iter()
         .map(|i| make_pipe_body(&sprite_base, x, top, total_dist, top_height, 1.0 *(i as f32)))
-        .collect::<Vec<Entity>>();
+        .collect::<Vec<Box<Entity>>>();
 
-    p.push(pipe_tip);
+    p.push(Box::new(pipe_tip));
     p
 }
 
@@ -91,7 +91,7 @@ pub fn create_pipes(
     sprite_top: Sprite,
     pipe_tracker: &mut PipeTracker,
     x: f32,
-) -> Vec<Entity> {
+) -> Vec<Box<Entity>> {
     let number_of_pipes = NUM_PIPES;
     let width = sprite_top.width;
     let space_width = width * SPACE_MULTIPLIER;
@@ -116,6 +116,7 @@ pub fn create_pipes(
                 top - gap,
                 total_dist,
             ));
+
             bottom
         })
         .collect()
@@ -127,7 +128,7 @@ fn create_pipe_top(
     x: f32,
     top: f32,
     total_dist: f32,
-) -> Vec<Entity> {
+) -> Vec<Box<Entity>> {
     use crate::entity::ScoringPipe;
     let top_height = -1.0 * sprite_top.height;
     let mut sprite_top = sprite_top;
@@ -142,9 +143,9 @@ fn create_pipe_top(
         .map(|i|
             make_pipe_body(&sprite_base, x, top, total_dist, top_height, -1.0 *(i as f32))
        )
-        .collect::<Vec<Entity>>();
+        .collect::<Vec<Box<Entity>>>();
 
-    p.push(pipe_tip);
+    p.push(Box::new(pipe_tip));
     p
 }
 
@@ -152,14 +153,15 @@ fn pipe_velocity() -> Vector2<f32> {
     ggez::nalgebra::Vector2::new(-PIPE_SPEED, 0.0)
 }
 
-fn make_pipe_body(sprite_base: &Sprite, x: f32, top: f32, total_dist: f32, top_height: f32, i: f32) -> Entity {
+fn make_pipe_body(sprite_base: &Sprite, x: f32, top: f32, total_dist: f32, top_height: f32, i: f32) -> Box<Entity> {
     let mut pipe_body = Entity::new(false, sprite_base.clone());
     pipe_body.is_pipe = true;
     pipe_body.position =
         Point2::new(x, top + top_height + (sprite_base.height * i));
-    pipe_body
+    pipe_body = pipe_body
         .scroller(total_dist)
-        .set_velocity(pipe_velocity())
+        .set_velocity(pipe_velocity());
+    Box::new(pipe_body)
 }
 
 fn create_pipe_tip(sprite_top: Sprite, x: f32, top: f32) -> Entity {
@@ -167,4 +169,7 @@ fn create_pipe_tip(sprite_top: Sprite, x: f32, top: f32) -> Entity {
     pipe_tip.position = Point2::new(x, top);
     pipe_tip.is_pipe = true;
     pipe_tip.set_velocity(pipe_velocity())
+//    ;
+
+//    Box::new(pipe_tip)
 }

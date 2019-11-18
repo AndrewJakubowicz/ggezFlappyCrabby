@@ -20,9 +20,10 @@ mod audio;
 mod window;
 use entity::{PlayState, ScoringPipe};
 use pipe::{create_pipes, PipeTracker};
-use audio::{Player};
+use audio::Player;
 use std::time::Duration;
 use crab::create_player;
+use crate::entity::GameEntity;
 
 const NUMBER_OF_TILES: u8 = 14;
 const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
@@ -30,7 +31,7 @@ const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
 struct GameState {
     /// Array of entities.
     /// Drawn in order.
-    entities: Vec<Entity>,
+    entities: Vec<Box<Entity>>,
     /// The sprite batch of all the images
     sprite_batch: SpriteBatch,
     /// The struct that moves the pipes around :)
@@ -68,7 +69,7 @@ impl GameState {
     fn create_start_entities(
         sprites: &atlas::Atlas,
         pipe_tracker: &mut PipeTracker,
-    ) -> Vec<Entity> {
+    ) -> Vec<Box<Entity>> {
         let floor_tile = sprites.create_sprite("floor_tile.png");
         let player = create_player(sprites);
         let mut entities = create_tiles(floor_tile);
@@ -113,50 +114,7 @@ impl EventHandler for GameState {
             }
         }
         // TODO: Another loop to check if player is dead.
-        {
-            if let Some((player, other)) = self.entities.split_last_mut() {
-                /*
-                if player.position.y > 1000.0 {
-                    if self.play_state == PlayState::Play {
-                        if let Some(p) = &mut player.physics {
-                            p.velocity.y = -100.0;
-                        }
-                        self.play_state = PlayState::Dead {
-                            time: ggez::timer::time_since_start(ctx),
-                        };
-                    }
-                }
-                */
-                // Check player against others.
-                let mut player_rect = player.get_bounds();
-                player_rect.move_to(player.position.clone());
-                for i in 0..other.len() {
-                    {
-                        let mut scored = false;
-                        if let Some(ScoringPipe::ReadyToScore) = other[i].scoring_pipe {
-                            if other[i].position.x < 20.0 {
-                                scored = true;
-                            }
-                        }
-                        if scored && PlayState::is_playing(&self.play_state) {
-                            other[i].scoring_pipe = Some(ScoringPipe::Scored);
-                            self.score += 1;
-                            let pitch: f32 = thread_rng().sample(OpenClosed01);
-                            self.sound_player.score_sound.set_pitch(1.0 + pitch);
-                            self.sound_player.score();
-                        }
-                    }
-                    let mut other_rect = other[i].get_bounds();
-                    other_rect.move_to(other[i].position.clone());
-                    if other_rect.overlaps(&player_rect) && PlayState::is_playing(&self.play_state) {
-                        self.sound_player.ouch();
-                        self.play_state = PlayState::Dead {
-                            time: ggez::timer::time_since_start(ctx),
-                        };
-                    }
-                }
-            }
-        }
+        update_it(self, ctx);
         Ok(())
     }
 
@@ -181,6 +139,40 @@ impl EventHandler for GameState {
     }
 }
 
+fn update_it(game: &mut GameState, ctx: &mut Context) {
+    if let Some((player, other)) = game.entities.split_last_mut() {
+        /*
+        if player.position.y > 1000.0 {
+            if g.play_state == PlayState::Play {
+                if let Some(p) = &mut player.physics {
+                    p.velocity.y = -100.0;
+                }
+                g.play_state = PlayState::Dead {
+                    time: ggez::timer::time_since_start(ctx),
+                };
+            }
+        }
+        */
+        // Check player against others.
+
+        for i in 0..other.len() {
+
+            if other[i].set_score(&game.play_state) {
+                game.score += 1;
+                let pitch: f32 = thread_rng().sample(OpenClosed01);
+                game.sound_player.score_sound.set_pitch(1.0 + pitch);
+                game.sound_player.score();
+            }
+
+            if player.overlaps(&other[i]) && PlayState::is_playing(&game.play_state) {
+                game.sound_player.ouch();
+                game.play_state = PlayState::Dead {
+                    time: ggez::timer::time_since_start(ctx),
+                };
+            }
+        }
+    }
+}
 
 fn main() {
     let resource_dir = std::path::PathBuf::from("./resources");
@@ -204,14 +196,15 @@ fn create_batch_sprite(ctx: &mut Context) -> SpriteBatch {
     batch
 }
 
-fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Entity {
+fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Box<Entity> {
     let mut tile = entity::Entity::new(false, sprite);
     tile.position = Point2::new(x, 145.0);
-    tile.scroller(jump)
-        .set_velocity(ggez::nalgebra::Vector2::new(-1.0, 0.0))
+    let tile = tile.scroller(jump)
+        .set_velocity(ggez::nalgebra::Vector2::new(-1.0, 0.0));
+    Box::new(tile)
 }
 
-fn create_tiles(sprite: Sprite) -> Vec<Entity> {
+fn create_tiles(sprite: Sprite) -> Vec<Box<Entity>> {
     let width = sprite.width;
     let total_dist = width * (NUMBER_OF_TILES as f32);
     (0..NUMBER_OF_TILES)
