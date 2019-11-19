@@ -232,41 +232,52 @@ impl Entity {
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
         if self.player_sprites.is_some() {
-            if let Some(s) = &mut self.player_sprites {
-                let p = &self.physics;
-                    // need velocity to map to these rotations between -0.2 and 0.2!
-                    let angle = rescale_range(p.velocity.y, -7.0, 7.0, -0.6, 0.6);
-                    let x = if p.velocity.y < 0.0 {
-                        &mut s[0]
-                    } else {
-                        &mut s[1]
-                    };
-                    batch.add(
-                        x.add_draw_param(self.position.clone())
-                            .offset(Point2::new(0.5, 0.5))
-                            .rotation(angle),
-                    );
-
-            }
+            self.draw_player(batch);
         } else {
-            let s = &mut self.sprite; {
-                batch.add(s.add_draw_param(self.position.clone()));
-                if DEBUG {
-                    let rect = s.get_bound_box();
-                    let mesh = graphics::Mesh::new_rectangle(
-                        ctx,
-                        graphics::DrawMode::stroke(1.0),
-                        rect,
-                        graphics::BLACK,
-                    )?;
-                    let p = graphics::DrawParam::new()
-                        .dest(self.position.clone() * 4.0)
-                        .scale(Vector2::new(4.0, 4.0));
-                    graphics::draw(ctx, &mesh, p)?;
-                }
-            }
+            self.draw_entity(ctx, batch);
         }
         Ok(())
+    }
+
+    fn draw_entity(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
+        let s = &mut self.sprite;
+        batch.add(s.add_draw_param(self.position.clone()));
+
+        if !DEBUG {
+            return Ok(())
+        }
+
+        let rect = s.get_bound_box();
+        let mesh = graphics::Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::stroke(1.0),
+            rect,
+            graphics::BLACK,
+        )?;
+
+        let p = graphics::DrawParam::new()
+            .dest(self.position.clone() * 4.0)
+            .scale(Vector2::new(4.0, 4.0));
+        graphics::draw(ctx, &mesh, p)?;
+
+        Ok(())
+    }
+
+    fn draw_player(&mut self, batch: &mut SpriteBatch) {
+        let s = self.player_sprites.as_mut().unwrap();
+        let p = &self.physics;
+        // need velocity to map to these rotations between -0.2 and 0.2!
+        let angle = rescale_range(p.velocity.y, -7.0, 7.0, -0.6, 0.6);
+        let x = if p.velocity.y >= 0.0 {
+            &mut s[1]
+        } else {
+            &mut s[0]
+        };
+        batch.add(
+            x.add_draw_param(self.position.clone())
+                .offset(Point2::new(0.5, 0.5))
+                .rotation(angle),
+        );
     }
 
     pub fn overlaps(&self, other : &Self) -> bool {
