@@ -57,11 +57,11 @@ pub struct Entity {
     pub sprite: Sprite,
     pub position: Point2<f32>,
     pub is_player: bool,
-    can_jump: bool,
+    pub player_sprites: Option<Vec<Sprite>>,
+    player_can_jump: bool,
     pub physics: Physics,
     scroller: Option<Scroll>,
     pub is_pipe: bool,
-    pub player_sprites: Option<Vec<Sprite>>,
     pub scoring_pipe: Option<ScoringPipe>,
 }
 
@@ -77,13 +77,13 @@ pub trait GameEntity {
 /// Everything that can be interacted with is an entity.
 /// The player is an entity, as well as the pipes.
 impl Entity {
-    pub fn new(with_gravity: bool, sprite: Sprite, x: f32, y: f32) -> Self {
+    pub fn new(with_gravity: bool, sprite: Sprite, position: (f32, f32)) -> Self {
         Self {
             sprite,
-            position: Point2::new(x, y),
+            position: Point2::new(position.0, position.1),
             is_player: false,
             physics: Physics::new(with_gravity),
-            can_jump: true,
+            player_can_jump: true,
             scroller: None,
             is_pipe: false,
             player_sprites: None,
@@ -92,7 +92,7 @@ impl Entity {
     }
 
     pub fn new_pipe(sprite: Sprite, x: f32, y: f32) -> Self {
-        let mut pipe = Self::new(false, sprite, x, y);
+        let mut pipe = Self::new(false, sprite, (x, y));
         pipe.is_pipe = true;
 
         pipe.set_velocity(pipe_velocity())
@@ -148,22 +148,22 @@ impl Entity {
         physics.velocity = Vector2::new(0.0, -JUMP_IMPULSE);
     }
 
-    fn prevent_falling_off_left(&mut self, pipe_tracker: &mut PipeTracker) {
+    fn recycle_passed_entities(&mut self, pipe_tracker: &mut PipeTracker) {
         if self.scroller.as_ref().is_none() {
             return ;
         }
-        let scroll = self.scroller.as_ref().unwrap();
-        let sprite = &self.sprite;
-        let right_pos = sprite.width + self.position.x;
+        let right_pos = &self.sprite.width + self.position.x;
         if right_pos >= 0.0 {
             return ;
         }
+
         if self.is_pipe {
             self.position.y += pipe_tracker.get_pipe_difference();
         }
         if self.scoring_pipe.is_some() {
             self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
         }
+        let scroll = self.scroller.as_ref().unwrap();
         self.position.x += scroll.jump_distance;
     }
 }
@@ -175,8 +175,6 @@ impl Entity {
         pipe_tracker: &mut PipeTracker,
         state: &PlayState,
     ) -> PlayState {
-        let delta = ggez::timer::delta(ctx).as_nanos() as f32;
-
         let physics = &mut self.physics;
         physics.acceleration = if physics.gravity {
             Vector2::new(0.0, GRAVITY)
@@ -186,22 +184,21 @@ impl Entity {
 
 
         let mut state = state.clone();
-        if self.is_player && (state == PlayState::StartScreen || state == PlayState::Play)
+        if self.is_player && state.is_not_dead()
         {
             use ggez::event::KeyCode;
             use ggez::input::keyboard;
-            if !keyboard::pressed_keys(ctx).contains(&KeyCode::Space) && !self.can_jump {
-                self.can_jump = true;
+            if !keyboard::pressed_keys(ctx).contains(&KeyCode::Space) && !self.player_can_jump {
+                self.player_can_jump = true;
             }
 
-            if keyboard::is_key_pressed(ctx, KeyCode::Space) && self.can_jump {
+            if keyboard::is_key_pressed(ctx, KeyCode::Space) && self.player_can_jump {
                 let physics = &mut self.physics;
                 Entity::jump(physics);
 
                 if state == PlayState::StartScreen {
                     state = PlayState::Play;
                 }
-                self.can_jump = false;
             }
         }
 
@@ -210,16 +207,19 @@ impl Entity {
             self.auto_jump()
         }
 
-        if !(PlayState::StartScreen == state && self.is_pipe) {
+        if PlayState::StartScreen != state || self.is_player {
+            let delta = ggez::timer::delta(ctx).as_nanos() as f32;
             let physics = &mut self.physics;
             physics.acceleration.scale(1.0 / delta);
 
             physics.velocity += physics.acceleration;
             physics.velocity.scale(1.0 / delta);
+
+            // moves all the entities on the board.
             self.position += physics.velocity;
 
             // prevent falling off the left side of the screen.
-            self.prevent_falling_off_left(pipe_tracker)
+            self.recycle_passed_entities(pipe_tracker)
         }
 
         if self.is_player {

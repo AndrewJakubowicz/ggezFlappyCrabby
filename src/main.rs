@@ -138,32 +138,31 @@ impl EventHandler for GameState {
 }
 
 fn update_it(game: &mut GameState, ctx: &mut Context) {
-    if let Some((player, other)) = game.entities.split_last_mut() {
-        /*
-        if player.position.y > 1000.0 {
-            if g.play_state == PlayState::Play {
-                if let Some(p) = &mut player.physics {
-                    p.velocity.y = -100.0;
-                }
-                g.play_state = PlayState::Dead {
-                    time: ggez::timer::time_since_start(ctx),
-                };
+    let (player, other) = game.entities.split_last_mut().unwrap();
+    /*
+    if player.position.y > 1000.0 {
+        if g.play_state == PlayState::Play {
+            if let Some(p) = &mut player.physics {
+                p.velocity.y = -100.0;
             }
+            g.play_state = PlayState::Dead {
+                time: ggez::timer::time_since_start(ctx),
+            };
         }
-        */
-        // Check player against others.
+    }
+    */
+    // Check player against others.
 
-        for i in 0..other.len() {
+    for i in 0..other.len() {
 
-            if other[i].set_scored(&game.play_state) {
-                game.score += 1;
-                game.sound_player.score();
-            }
+        if other[i].set_scored(&game.play_state) {
+            game.score += 1;
+            game.sound_player.score();
+        }
 
-            if player.overlaps(&other[i]) && game.play_state.is_playing() {
-                game.sound_player.ouch();
-                game.play_state.set_dead(ggez::timer::time_since_start(ctx));
-            }
+        if player.overlaps(&other[i]) && game.play_state.is_playing() {
+            game.sound_player.ouch();
+            game.play_state.set_dead(ggez::timer::time_since_start(ctx));
         }
     }
 }
@@ -190,19 +189,20 @@ fn create_batch_sprite(ctx: &mut Context) -> SpriteBatch {
     batch
 }
 
-fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Box<Entity> {
-    let mut tile = entity::Entity::new(false, sprite, x, 145.0);
-    let tile = tile.scroller(jump).set_velocity((-1.0, 0.0));
+fn create_tile_scroll(sprite: Sprite, x: f32) -> Box<Entity> {
+    let tile = entity::Entity::new(false, sprite, (x, 145.0));
+    // floor tiles do not need to move... do they ?!
+    // let tile = tile.scroller(jump).set_velocity((-1.0, 0.0));
 
     Box::new(tile)
 }
 
 fn create_tiles(sprite: Sprite) -> Vec<Box<Entity>> {
     let width = sprite.width;
-    let total_dist = width * (NUMBER_OF_TILES as f32);
+//    let total_dist = width * (NUMBER_OF_TILES as f32);
     (0..NUMBER_OF_TILES)
         .into_iter()
-        .map(|i| create_tile_scroll(sprite.clone(), (i as f32) * width, total_dist))
+        .map(|i| create_tile_scroll(sprite.clone(), (i as f32) * width))
         .collect()
 }
 
@@ -228,6 +228,9 @@ impl PlayState {
         *self = PlayState::Dead {
             time
         }
+    }
+    fn is_not_dead (&self) -> bool {
+        *self == PlayState::Play || *self == PlayState::StartScreen
     }
 }
 
