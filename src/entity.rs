@@ -79,7 +79,7 @@ pub trait GameEntity {
 impl Entity {
     pub fn new(with_gravity: bool, sprite: Sprite, x: f32, y: f32) -> Self {
         Self {
-            sprite: sprite,
+            sprite,
             position: Point2::new(x, y),
             is_player: false,
             physics: Physics::new(with_gravity),
@@ -91,7 +91,7 @@ impl Entity {
         }
     }
 
-    pub fn newPipe (sprite: Sprite, x: f32, y: f32) -> Self {
+    pub fn new_pipe(sprite: Sprite, x: f32, y: f32) -> Self {
         let mut pipe = Self::new(false, sprite, x, y);
         pipe.is_pipe = true;
 
@@ -174,9 +174,8 @@ impl Entity {
         ctx: &mut Context,
         pipe_tracker: &mut PipeTracker,
         state: &PlayState,
-    ) -> (GameResult, PlayState) {
+    ) -> PlayState {
         let delta = ggez::timer::delta(ctx).as_nanos() as f32;
-        let mut state = state.clone();
 
         let physics = &mut self.physics;
         physics.acceleration = if physics.gravity {
@@ -186,6 +185,7 @@ impl Entity {
         };
 
 
+        let mut state = state.clone();
         if self.is_player && (state == PlayState::StartScreen || state == PlayState::Play)
         {
             use ggez::event::KeyCode;
@@ -227,7 +227,7 @@ impl Entity {
             self.prevent_going_off();
         }
 
-        (Ok(()), state)
+        state
     }
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {

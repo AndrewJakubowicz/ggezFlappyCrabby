@@ -16,12 +16,12 @@ mod pipe;
 mod crab;
 mod audio;
 mod window;
-use entity::{PlayState, ScoringPipe};
+use entity::PlayState;
 use pipe::{create_pipes, PipeTracker};
 use audio::Player;
 use std::time::Duration;
 use crab::create_player;
-use crate::entity::GameEntity;
+//use crate::entity::GameEntity;
 
 const NUMBER_OF_TILES: u8 = 14;
 const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
@@ -61,10 +61,6 @@ impl GameState {
             best_score: 0,
             sound_player
         }
-    }
-
-    fn is_playing (&self) -> bool {
-        self.play_state.is_playing()
     }
 
     /// The last entity *must* be the player.
@@ -108,8 +104,8 @@ impl EventHandler for GameState {
         let state = self.play_state.clone();
         self.handle_after_losing(ctx, state);
         for i in 0..self.entities.len() {
-            let (result, state) = self.entities[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
-            result?;
+            let state = self.entities[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
+
             if !self.play_state.is_playing() && state == PlayState::Play {
                 self.play_state = PlayState::Play;
                 break;

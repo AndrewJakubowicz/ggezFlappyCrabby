@@ -1,6 +1,7 @@
 use ggez::nalgebra::Point2;
 use crate::{atlas, entity};
-use crate::entity::{Entity, GameEntity};
+use crate::entity::Entity;
+//use crate::entity::GameEntity;
 
 pub fn create_player(sprites: &atlas::Atlas) -> Box<Entity> {
     let crab0 = sprites.create_sprite("crab0.png");

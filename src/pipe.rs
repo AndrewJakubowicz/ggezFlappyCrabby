@@ -1,6 +1,6 @@
-use crate::entity::{Entity, GameEntity};
+use crate::entity::{Entity/*, GameEntity*/};
 use crate::Sprite;
-use ggez::nalgebra::{Point2, Vector2};
+//use ggez::nalgebra::{Point2, Vector2};
 use noise::NoiseFn;
 use noise::Perlin;
 use std::collections::VecDeque;
@@ -155,11 +155,11 @@ pub fn pipe_velocity() -> (f32, f32) {
 
 fn make_pipe_body(sprite_base: &Sprite, x: f32, top: f32, total_dist: f32, top_height: f32, i: f32) -> Box<Entity> {
     let top = top + top_height + (sprite_base.height * i);
-    let mut pipe_body = Entity::newPipe(sprite_base.clone(), x, top);
+    let mut pipe_body = Entity::new_pipe(sprite_base.clone(), x, top);
     pipe_body = pipe_body.scroller(total_dist);
     Box::new(pipe_body)
 }
 
 fn create_pipe_tip(sprite_top: Sprite, x: f32, top: f32) -> Entity {
-    Entity::newPipe(sprite_top, x, top)
+    Entity::new_pipe(sprite_top, x, top)
 }
