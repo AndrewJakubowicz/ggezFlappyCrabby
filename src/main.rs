@@ -1,7 +1,6 @@
 use atlas::Sprite;
 use ggez::nalgebra::{Point2, Vector2};
 use ggez::{
-    audio::SoundSource,
     event::EventHandler,
     graphics::{spritebatch::SpriteBatch, Text},
     Context,
@@ -20,8 +19,8 @@ use entity::PlayState;
 use pipe::{create_pipes, PipeTracker};
 use audio::Player;
 use std::time::Duration;
-use crab::create_player;
-//use crate::entity::GameEntity;
+use crate::entity::{PlayerEntity, TileEntity};
+use crate::crab::create_player2;
 
 const NUMBER_OF_TILES: u8 = 14;
 const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
@@ -29,7 +28,9 @@ const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
 struct GameState {
     /// Array of entities.
     /// Drawn in order.
-    entities: Vec<Box<Entity>>,
+    pipes: Vec<Box<Entity>>,
+    tiles: Vec<Box<TileEntity>>,
+    player: Box<PlayerEntity>,
     /// The sprite batch of all the images
     sprite_batch: SpriteBatch,
     /// The struct that moves the pipes around :)
@@ -52,7 +53,9 @@ impl GameState {
         let sound_player = Player::new(ctx);
 
         Self {
-            entities: GameState::create_start_entities(&sprites, &mut pipe_tracker),
+            pipes: GameState::create_start_entities(&sprites, &mut pipe_tracker),
+            player: create_player2(&sprites),
+            tiles : create_tiles(&sprites),
             sprite_batch,
             pipe_tracker,
             play_state: PlayState::StartScreen,
@@ -68,24 +71,20 @@ impl GameState {
         sprites: &atlas::Atlas,
         pipe_tracker: &mut PipeTracker,
     ) -> Vec<Box<Entity>> {
-        let floor_tile = sprites.create_sprite("floor_tile.png");
-        let player = create_player(sprites);
-        let mut entities = create_tiles(floor_tile);
         let pipes = create_pipes(
             sprites.create_sprite("pipe_bottom.png"),
             sprites.create_sprite("pipe_top.png"),
             pipe_tracker,
             200.0,
         );
-        entities.extend(pipes);
-        entities.extend(vec![player]);
-        entities
+        pipes
     }
 
     fn restart(&mut self) {
         self.sound_player.begin();
         let mut pt = PipeTracker::new();
-        self.entities = GameState::create_start_entities(&self.atlas, &mut pt);
+        self.pipes = GameState::create_start_entities(&self.atlas, &mut pt);
+        self.player = create_player2(&self.atlas);
         self.pipe_tracker = pt;
         self.play_state = PlayState::StartScreen;
         self.swap_scores();
@@ -103,13 +102,12 @@ impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         let state = self.play_state.clone();
         self.handle_after_losing(ctx, state);
-        for i in 0..self.entities.len() {
-            let state = self.entities[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
-
-            if !self.play_state.is_playing() && state == PlayState::Play {
-                self.play_state = PlayState::Play;
-                break;
-            }
+        let state = self.player.update(ctx, &self.play_state);
+        if !self.play_state.is_playing() && state == PlayState::Play {
+            self.play_state = PlayState::Play;
+        }
+        for i in 0..self.pipes.len() {
+            self.pipes[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
         }
         // TODO: Another loop to check if player is dead.
         update_it(self, ctx);
@@ -119,13 +117,17 @@ impl EventHandler for GameState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::Color::from_rgb(112, 216, 255));
 
-        for i in 0..self.entities.len() {
-            self.entities[i].draw(ctx, &mut self.sprite_batch)?;
+        self.player.draw(&mut self.sprite_batch)?;
+        for i in 0..self.tiles.len() {
+            self.tiles[i].draw(ctx, &mut self.sprite_batch);
+        }
+        for i in 0..self.pipes.len() {
+            self.pipes[i].draw(ctx, &mut self.sprite_batch)?;
         }
 
         let p = graphics::DrawParam::new().scale(Vector2::new(4.0, 4.0));
         {
-            graphics::draw(ctx, &mut self.sprite_batch, p);
+            graphics::draw(ctx, &mut self.sprite_batch, p)?;
             self.sprite_batch.clear();
         }
 
@@ -138,33 +140,28 @@ impl EventHandler for GameState {
 }
 
 fn update_it(game: &mut GameState, ctx: &mut Context) {
-    let (player, other) = game.entities.split_last_mut().unwrap();
-    /*
-    if player.position.y > 1000.0 {
-        if g.play_state == PlayState::Play {
-            if let Some(p) = &mut player.physics {
-                p.velocity.y = -100.0;
-            }
-            g.play_state = PlayState::Dead {
-                time: ggez::timer::time_since_start(ctx),
-            };
-        }
-    }
-    */
+    let player = &game.player;
+    let pipes = &mut game.pipes;
+    let tiles = &mut game.tiles;
+
     // Check player against others.
 
-    for i in 0..other.len() {
-
-        if other[i].set_scored(&game.play_state) {
+    for i in 0..pipes.len() {
+        if pipes[i].set_scored(&game.play_state) {
             game.score += 1;
             game.sound_player.score();
         }
 
-        if player.overlaps(&other[i]) && game.play_state.is_playing() {
+        // if hits a pipe  || hits ground
+        if (player.overlaps(&pipes[i]) || hits_ground(player)) && game.play_state.is_playing() {
             game.sound_player.ouch();
             game.play_state.set_dead(ggez::timer::time_since_start(ctx));
         }
     }
+}
+
+fn hits_ground(player: &Box<PlayerEntity>) -> bool {
+    player.position.y > 135.0
 }
 
 fn main() {
@@ -189,20 +186,21 @@ fn create_batch_sprite(ctx: &mut Context) -> SpriteBatch {
     batch
 }
 
-fn create_tile_scroll(sprite: Sprite, x: f32) -> Box<Entity> {
-    let tile = entity::Entity::new(false, sprite, (x, 145.0));
+fn create_tile_scroll(sprite: Sprite, x: f32) -> Box<TileEntity> {
+    let tile = entity::TileEntity::new(sprite, (x, 145.0));
     // floor tiles do not need to move... do they ?!
     // let tile = tile.scroller(jump).set_velocity((-1.0, 0.0));
 
     Box::new(tile)
 }
 
-fn create_tiles(sprite: Sprite) -> Vec<Box<Entity>> {
-    let width = sprite.width;
-//    let total_dist = width * (NUMBER_OF_TILES as f32);
+fn create_tiles(sprites: &atlas::Atlas) -> Vec<Box<TileEntity>> {
+    let floor_tile = sprites.create_sprite("floor_tile.png");
+    let width = floor_tile.width;
+
     (0..NUMBER_OF_TILES)
         .into_iter()
-        .map(|i| create_tile_scroll(sprite.clone(), (i as f32) * width))
+        .map(|i| create_tile_scroll(floor_tile.clone(), (i as f32) * width))
         .collect()
 }
 
@@ -229,6 +227,7 @@ impl PlayState {
             time
         }
     }
+
     fn is_not_dead (&self) -> bool {
         *self == PlayState::Play || *self == PlayState::StartScreen
     }

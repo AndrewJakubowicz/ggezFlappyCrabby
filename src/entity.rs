@@ -5,12 +5,6 @@ use ggez::graphics::spritebatch::SpriteBatch;
 use ggez::nalgebra::{Point2, Vector2};
 use ggez::Context;
 use ggez::GameResult;
-use ggez::graphics::Rect;
-use crate::GameState;
-use ggez::audio::SoundSource;
-use rand::Rng;
-use rand::distributions::OpenClosed01;
-use rand::thread_rng;
 
 const DEBUG: bool = false;
 
@@ -53,16 +47,157 @@ pub enum ScoringPipe {
     Scored,
 }
 
+pub struct TileEntity {
+    pub sprite: Sprite,
+    pub position: Point2<f32>,
+}
+
+impl TileEntity {
+    pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) {
+        let s = &mut self.sprite;
+        batch.add(s.add_draw_param(self.position.clone()));
+    }
+
+    pub fn new(sprite: Sprite, position: (f32, f32)) -> Self {
+        Self {
+            sprite,
+            position: Point2::new(position.0, position.1),
+        }
+    }
+}
+
 pub struct Entity {
     pub sprite: Sprite,
     pub position: Point2<f32>,
-    pub is_player: bool,
-    pub player_sprites: Option<Vec<Sprite>>,
-    player_can_jump: bool,
-    pub physics: Physics,
     scroller: Option<Scroll>,
     pub is_pipe: bool,
     pub scoring_pipe: Option<ScoringPipe>,
+}
+
+pub struct PlayerEntity {
+    pub sprite: Sprite,
+    pub position: Point2<f32>,
+    pub player_sprites: Vec<Sprite>,
+    can_jump: bool,
+    pub physics: Physics,
+}
+
+impl PlayerEntity {
+    pub fn update(
+        &mut self,
+        ctx: &mut Context,
+        state: &PlayState,
+    ) -> PlayState {
+        let physics = &mut self.physics;
+        physics.acceleration = if physics.gravity {
+            Vector2::new(0.0, GRAVITY)
+        } else {
+            Vector2::new(0.0, 0.0)
+        };
+
+
+        let mut state = state.clone();
+        if state.is_not_dead()
+        {
+            use ggez::event::KeyCode;
+            use ggez::input::keyboard;
+            if !keyboard::pressed_keys(ctx).contains(&KeyCode::Space) && !self.can_jump {
+                self.can_jump = true;
+            }
+
+            if keyboard::is_key_pressed(ctx, KeyCode::Space) && self.can_jump {
+                let physics = &mut self.physics;
+                PlayerEntity::jump(physics);
+
+                // exit start screen state.
+                if state == PlayState::StartScreen {
+                    state = PlayState::Play;
+                }
+            }
+        }
+
+        // Self jumping script on the start screen.
+        if state == PlayState::StartScreen {
+            self.auto_jump()
+        }
+
+        self.change_position(ctx);
+
+        // clamp y to not go above the top of the screen easily.
+        self.prevent_going_off();
+        state
+    }
+
+    fn change_position(&mut self, ctx: &mut Context) {
+        let delta = ggez::timer::delta(ctx).as_nanos() as f32;
+        let physics = &mut self.physics;
+        physics.acceleration.scale(1.0 / delta);
+        physics.velocity += physics.acceleration;
+        physics.velocity.scale(1.0 / delta);
+        // moves all the entities on the board.
+        self.position += physics.velocity;
+    }
+
+    pub fn new(sprite: Sprite, position: (f32, f32), player_sprites: Vec<Sprite>) -> Self {
+        Self {
+            sprite,
+            position: Point2::new(position.0, position.1),
+            physics: Physics::new(true),
+            can_jump: true,
+            player_sprites,
+        }
+    }
+    pub fn overlaps(&self, other : &Entity) -> bool {
+        let player_rect = self.get_bounds();
+        let other_rect = other.get_bounds();
+
+        other_rect.overlaps(&player_rect)
+    }
+    pub fn get_bounds(&self) -> graphics::Rect {
+        let mut rect = self.sprite.get_bound_box();
+        rect.move_to(self.position.clone());
+
+        rect
+    }
+    fn prevent_going_off(&mut self) -> () {
+        self.position.y = if self.position.y < SCREEN_TOP {
+            SCREEN_TOP
+        } else {
+            self.position.y
+        }
+    }
+    fn auto_jump(&mut self) -> () {
+        let physics = &mut self.physics;
+        if self.position.y > 600.0 / 8.0 {
+            PlayerEntity::jump(physics);
+        }
+    }
+    pub fn draw(&mut self, batch: &mut SpriteBatch) -> GameResult {
+        self.draw_player(batch);
+
+        Ok(())
+    }
+    fn draw_player(&mut self, batch: &mut SpriteBatch) {
+        let s = &mut self.player_sprites;
+        let p = &self.physics;
+        // need velocity to map to these rotations between -0.2 and 0.2!
+        let angle = rescale_range(p.velocity.y, -7.0, 7.0, -0.6, 0.6);
+        let x = if p.velocity.y >= 0.0 {
+            &mut s[1]
+        } else {
+            &mut s[0]
+        };
+        batch.add(
+            x.add_draw_param(self.position.clone())
+                .offset(Point2::new(0.5, 0.5))
+                .rotation(angle),
+        );
+    }
+
+    fn jump(physics: &mut Physics) {
+        physics.acceleration = Vector2::new(0.0, -GRAVITY);
+        physics.velocity = Vector2::new(0.0, -JUMP_IMPULSE);
+    }
 }
 
 /// Everything that can be interacted with is an entity.
@@ -77,25 +212,21 @@ pub trait GameEntity {
 /// Everything that can be interacted with is an entity.
 /// The player is an entity, as well as the pipes.
 impl Entity {
-    pub fn new(with_gravity: bool, sprite: Sprite, position: (f32, f32)) -> Self {
+    pub fn new(sprite: Sprite, position: (f32, f32)) -> Self {
         Self {
             sprite,
             position: Point2::new(position.0, position.1),
-            is_player: false,
-            physics: Physics::new(with_gravity),
-            player_can_jump: true,
             scroller: None,
             is_pipe: false,
-            player_sprites: None,
             scoring_pipe: None,
         }
     }
 
     pub fn new_pipe(sprite: Sprite, x: f32, y: f32) -> Self {
-        let mut pipe = Self::new(false, sprite, (x, y));
+        let mut pipe = Self::new(sprite, (x, y));
         pipe.is_pipe = true;
 
-        pipe.set_velocity(pipe_velocity())
+        pipe
     }
 
     // Panics if there isn't a sprite.
@@ -123,43 +254,14 @@ impl Entity {
         self
     }
 
-    pub fn set_velocity(mut self, vel: (f32, f32)) -> Self {
-        self.physics.velocity = ggez::nalgebra::Vector2::new(vel.0, vel.1);
-
-        self
-    }
-
-    fn auto_jump(&mut self) -> () {
-        let physics = &mut self.physics;
-        if self.position.y > 600.0 / 8.0 {
-            Entity::jump(physics);
-        }
-    }
-
-    fn prevent_going_off(&mut self) -> () {
-        self.position.y = if self.position.y < SCREEN_TOP {
-            SCREEN_TOP
-        } else {
-            self.position.y
-        }
-    }
-    fn jump(physics: &mut Physics) {
-        physics.acceleration = Vector2::new(0.0, -GRAVITY);
-        physics.velocity = Vector2::new(0.0, -JUMP_IMPULSE);
-    }
-
-    fn recycle_passed_entities(&mut self, pipe_tracker: &mut PipeTracker) {
-        if self.scroller.as_ref().is_none() {
-            return ;
-        }
+    fn recycle_passed_pipes(&mut self, pipe_tracker: &mut PipeTracker) {
         let right_pos = &self.sprite.width + self.position.x;
         if right_pos >= 0.0 {
             return ;
         }
 
-        if self.is_pipe {
-            self.position.y += pipe_tracker.get_pipe_difference();
-        }
+        self.position.y += pipe_tracker.get_pipe_difference();
+
         if self.scoring_pipe.is_some() {
             self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
         }
@@ -174,68 +276,23 @@ impl Entity {
         ctx: &mut Context,
         pipe_tracker: &mut PipeTracker,
         state: &PlayState,
-    ) -> PlayState {
-        let physics = &mut self.physics;
-        physics.acceleration = if physics.gravity {
-            Vector2::new(0.0, GRAVITY)
-        } else {
-            Vector2::new(0.0, 0.0)
-        };
-
-
-        let mut state = state.clone();
-        if self.is_player && state.is_not_dead()
-        {
-            use ggez::event::KeyCode;
-            use ggez::input::keyboard;
-            if !keyboard::pressed_keys(ctx).contains(&KeyCode::Space) && !self.player_can_jump {
-                self.player_can_jump = true;
-            }
-
-            if keyboard::is_key_pressed(ctx, KeyCode::Space) && self.player_can_jump {
-                let physics = &mut self.physics;
-                Entity::jump(physics);
-
-                if state == PlayState::StartScreen {
-                    state = PlayState::Play;
-                }
-            }
+    ) {
+        if PlayState::StartScreen == *state {
+          return ;
         }
 
-        // Self jumping script on the start screen.
-        if self.is_player && state == PlayState::StartScreen {
-            self.auto_jump()
+        if self.is_pipe {
+            // Moves the pipes towards the crab !
+            let speed = pipe_velocity();
+            self.position += Vector2::new(speed.0, speed.1);
+            // when the pipes go off the left side.
+            // we put them back at right side to come again.
+            self.recycle_passed_pipes(pipe_tracker);
         }
-
-        if PlayState::StartScreen != state || self.is_player {
-            let delta = ggez::timer::delta(ctx).as_nanos() as f32;
-            let physics = &mut self.physics;
-            physics.acceleration.scale(1.0 / delta);
-
-            physics.velocity += physics.acceleration;
-            physics.velocity.scale(1.0 / delta);
-
-            // moves all the entities on the board.
-            self.position += physics.velocity;
-
-            // prevent falling off the left side of the screen.
-            self.recycle_passed_entities(pipe_tracker)
-        }
-
-        if self.is_player {
-            // clamp y to not go above the top of the screen easily.
-            self.prevent_going_off();
-        }
-
-        state
     }
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
-        if self.player_sprites.is_some() {
-            self.draw_player(batch);
-        } else {
-            self.draw_entity(ctx, batch);
-        }
+        self.draw_entity(ctx, batch)?;
         Ok(())
     }
 
@@ -261,30 +318,6 @@ impl Entity {
         graphics::draw(ctx, &mesh, p)?;
 
         Ok(())
-    }
-
-    fn draw_player(&mut self, batch: &mut SpriteBatch) {
-        let s = self.player_sprites.as_mut().unwrap();
-        let p = &self.physics;
-        // need velocity to map to these rotations between -0.2 and 0.2!
-        let angle = rescale_range(p.velocity.y, -7.0, 7.0, -0.6, 0.6);
-        let x = if p.velocity.y >= 0.0 {
-            &mut s[1]
-        } else {
-            &mut s[0]
-        };
-        batch.add(
-            x.add_draw_param(self.position.clone())
-                .offset(Point2::new(0.5, 0.5))
-                .rotation(angle),
-        );
-    }
-
-    pub fn overlaps(&self, other : &Self) -> bool {
-        let player_rect = self.get_bounds();
-        let other_rect = other.get_bounds();
-
-        other_rect.overlaps(&player_rect)
     }
 
     pub fn set_scored(&mut self, play_state : &PlayState) -> bool {
