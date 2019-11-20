@@ -66,7 +66,7 @@ impl TileEntity {
     }
 }
 
-pub struct Entity {
+pub struct PipeEntity {
     pub sprite: Sprite,
     pub position: Point2<f32>,
     scroller: Option<Scroll>,
@@ -146,7 +146,7 @@ impl PlayerEntity {
             player_sprites,
         }
     }
-    pub fn overlaps(&self, other : &Entity) -> bool {
+    pub fn overlaps(&self, other : &PipeEntity) -> bool {
         let player_rect = self.get_bounds();
         let other_rect = other.get_bounds();
 
@@ -210,7 +210,7 @@ pub trait GameEntity {
 
 /// Everything that can be interacted with is an entity.
 /// The player is an entity, as well as the pipes.
-impl Entity {
+impl PipeEntity {
     pub fn new(sprite: Sprite, position: (f32, f32)) -> Self {
         Self {
             sprite,
@@ -235,13 +235,11 @@ impl Entity {
     }
 
     pub fn get_scored (&self) -> bool {
-        let mut scored = false;
         if let Some(ScoringPipe::ReadyToScore) = self.scoring_pipe {
-            if self.position.x < 20.0 {
-                scored = true;
-            }
+            return true;
+        } else {
+            return false;
         }
-        scored
     }
 
     pub fn scroller(mut self, dist: f32) -> Self {
@@ -267,7 +265,7 @@ impl Entity {
     }
 }
 
-impl Entity {
+impl PipeEntity {
     pub fn update(
         &mut self,
         ctx: &mut Context,
@@ -280,7 +278,7 @@ impl Entity {
 
         // Moves the pipes towards the crab !
         let speed = pipe_velocity();
-        self.position += Vector2::new(speed.0, speed.1);
+        self.position += Vector2::new(speed, 0);
         // when the pipes go off the left side.
         // we put them back at right side to come again.
         self.recycle_passed_pipes(pipe_tracker);
@@ -316,9 +314,11 @@ impl Entity {
     }
 
     pub fn set_scored(&mut self, play_state : &PlayState) -> bool {
-        let scored = self.get_scored();
+        if self.position.x >= 20.0 {
+            return false;
+        }
 
-        if scored && PlayState::is_playing(&play_state) {
+        if  self.get_scored() && PlayState::is_playing(&play_state) {
             self.scoring_pipe = Some(ScoringPipe::Scored);
             return true;
         }

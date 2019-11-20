@@ -9,7 +9,7 @@ use ggez::{
     event
 };
 mod entity;
-use entity::Entity;
+use entity::PipeEntity;
 mod atlas;
 mod pipe;
 mod crab;
@@ -28,7 +28,7 @@ const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
 struct GameState {
     /// Array of entities.
     /// Drawn in order.
-    pipes: Vec<Box<Entity>>,
+    pipes: Vec<Box<PipeEntity>>,
     tiles: Vec<Box<TileEntity>>,
     player: Box<PlayerEntity>,
     /// The sprite batch of all the images
@@ -70,7 +70,7 @@ impl GameState {
     fn create_start_entities(
         sprites: &atlas::Atlas,
         pipe_tracker: &mut PipeTracker,
-    ) -> Vec<Box<Entity>> {
+    ) -> Vec<Box<PipeEntity>> {
         let pipes = create_pipes(
             sprites.create_sprite("pipe_bottom.png"),
             sprites.create_sprite("pipe_top.png"),
