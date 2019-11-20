@@ -70,7 +70,6 @@ pub struct Entity {
     pub sprite: Sprite,
     pub position: Point2<f32>,
     scroller: Option<Scroll>,
-    pub is_pipe: bool,
     pub scoring_pipe: Option<ScoringPipe>,
 }
 
@@ -217,14 +216,12 @@ impl Entity {
             sprite,
             position: Point2::new(position.0, position.1),
             scroller: None,
-            is_pipe: false,
             scoring_pipe: None,
         }
     }
 
     pub fn new_pipe(sprite: Sprite, x: f32, y: f32) -> Self {
         let mut pipe = Self::new(sprite, (x, y));
-        pipe.is_pipe = true;
 
         pipe
     }
@@ -281,14 +278,12 @@ impl Entity {
           return ;
         }
 
-        if self.is_pipe {
-            // Moves the pipes towards the crab !
-            let speed = pipe_velocity();
-            self.position += Vector2::new(speed.0, speed.1);
-            // when the pipes go off the left side.
-            // we put them back at right side to come again.
-            self.recycle_passed_pipes(pipe_tracker);
-        }
+        // Moves the pipes towards the crab !
+        let speed = pipe_velocity();
+        self.position += Vector2::new(speed.0, speed.1);
+        // when the pipes go off the left side.
+        // we put them back at right side to come again.
+        self.recycle_passed_pipes(pipe_tracker);
     }
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
