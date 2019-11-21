@@ -1,6 +1,5 @@
-use crate::entity::{PipeEntity/*, GameEntity*/};
+use crate::entity::{PipeEntity};
 use crate::Sprite;
-//use ggez::nalgebra::{Point2, Vector2};
 use noise::NoiseFn;
 use noise::Perlin;
 use std::collections::VecDeque;
@@ -8,7 +7,6 @@ use std::collections::VecDeque;
 const NUM_PIPES: usize = 4;
 const SEGMENTS: usize = 4;
 /// Count total segments. The pipe lengths and tops.
-//pub const TOTAL: usize = (SEGMENTS * 2) + 2;
 
 const PIPE_SPEED: f32 = 1.0;
 /// Distance between pipes relative to their width.
@@ -102,17 +100,18 @@ pub fn create_pipes(
         .into_iter()
         .flat_map(|i| {
             let top = pipe_tracker.init_get_pipe_top();
+            let pipe_x = x + (space_width + width) * (i as f32);
             let mut bottom = create_pipe_bottom(
                 sprite_base.clone(),
                 sprite_top.clone(),
-                x + (space_width + width) * (i as f32),
+                pipe_x,
                 top,
                 total_dist,
             );
             bottom.extend(create_pipe_top(
                 sprite_base.clone(),
                 sprite_top.clone(),
-                x + (space_width + width) * (i as f32),
+                pipe_x,
                 top - gap,
                 total_dist,
             ));
@@ -157,6 +156,7 @@ fn make_pipe_body(sprite_base: &Sprite, x: f32, top: f32, total_dist: f32, top_h
     let top = top + top_height + (sprite_base.height * i);
     let mut pipe_body = PipeEntity::new_pipe(sprite_base.clone(), x, top);
     pipe_body = pipe_body.scroller(total_dist);
+
     Box::new(pipe_body)
 }
 

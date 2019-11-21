@@ -1,5 +1,5 @@
 use crate::{atlas, entity};
-use crate::entity::{PlayState, Physics, PipeEntity};
+use crate::entity::{PlayState, PipeEntity};
 use crate::atlas::Sprite;
 use ggez::nalgebra::{Point2, Vector2};
 use ggez::{Context, graphics, GameResult};
@@ -8,6 +8,23 @@ use ggez::graphics::spritebatch::SpriteBatch;
 const GRAVITY: f32 = 0.25;
 const JUMP_IMPULSE: f32 = 2.75;
 pub const SCREEN_TOP: f32 = -16.0;
+
+/// The physics on the entity.
+pub struct Physics {
+    pub velocity: Vector2<f32>,
+    pub acceleration: Vector2<f32>,
+    pub gravity: bool,
+}
+
+impl Physics {
+    pub fn new (with_gravity: bool) -> Self {
+        Self {
+            velocity: Vector2::new(0.0, 0.0),
+            acceleration: Vector2::new(0.0, 0.0),
+            gravity: with_gravity,
+        }
+    }
+}
 
 pub fn create_player(sprites: &atlas::Atlas) -> Box<PlayerEntity> {
     let crab0 = sprites.create_sprite("crab0.png");

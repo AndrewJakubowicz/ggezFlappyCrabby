@@ -16,23 +16,6 @@ pub enum PlayState {
     Dead { time: std::time::Duration },
 }
 
-/// The physics on the entity.
-pub struct Physics {
-    pub velocity: Vector2<f32>,
-    pub acceleration: Vector2<f32>,
-    pub gravity: bool,
-}
-
-impl Physics {
-    pub fn new (with_gravity: bool) -> Self {
-        Self {
-            velocity: Vector2::new(0.0, 0.0),
-            acceleration: Vector2::new(0.0, 0.0),
-            gravity: with_gravity,
-        }
-    }
-}
-
 struct Scroll {
     jump_distance: f32,
 }
