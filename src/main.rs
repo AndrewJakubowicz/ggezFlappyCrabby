@@ -15,14 +15,15 @@ mod pipe;
 mod crab;
 mod audio;
 mod window;
+mod tile;
 use entity::PlayState;
 use pipe::{create_pipes, PipeTracker};
 use audio::Player;
 use std::time::Duration;
-use crate::entity::{PlayerEntity, TileEntity};
-use crate::crab::create_player2;
+use crate::crab::{PlayerEntity, create_player};
+use crate::tile::{TileEntity, create_tiles};
 
-const NUMBER_OF_TILES: u8 = 14;
+pub const NUMBER_OF_TILES: u8 = 14;
 const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
 
 struct GameState {
@@ -54,7 +55,7 @@ impl GameState {
 
         Self {
             pipes: GameState::create_start_entities(&sprites, &mut pipe_tracker),
-            player: create_player2(&sprites),
+            player: create_player(&sprites),
             tiles : create_tiles(&sprites),
             sprite_batch,
             pipe_tracker,
@@ -84,7 +85,7 @@ impl GameState {
         self.sound_player.begin();
         let mut pt = PipeTracker::new();
         self.pipes = GameState::create_start_entities(&self.atlas, &mut pt);
-        self.player = create_player2(&self.atlas);
+        self.player = create_player(&self.atlas);
         self.pipe_tracker = pt;
         self.play_state = PlayState::StartScreen;
         self.swap_scores();
@@ -184,24 +185,6 @@ fn create_batch_sprite(ctx: &mut Context) -> SpriteBatch {
     let mut batch = graphics::spritebatch::SpriteBatch::new(image);
     batch.set_filter(graphics::FilterMode::Nearest);
     batch
-}
-
-fn create_tile_scroll(sprite: Sprite, x: f32) -> Box<TileEntity> {
-    let tile = entity::TileEntity::new(sprite, (x, 145.0));
-    // floor tiles do not need to move... do they ?!
-    // let tile = tile.scroller(jump).set_velocity((-1.0, 0.0));
-
-    Box::new(tile)
-}
-
-fn create_tiles(sprites: &atlas::Atlas) -> Vec<Box<TileEntity>> {
-    let floor_tile = sprites.create_sprite("floor_tile.png");
-    let width = floor_tile.width;
-
-    (0..NUMBER_OF_TILES)
-        .into_iter()
-        .map(|i| create_tile_scroll(floor_tile.clone(), (i as f32) * width))
-        .collect()
 }
 
 impl GameState {
