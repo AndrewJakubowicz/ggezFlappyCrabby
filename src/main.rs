@@ -12,6 +12,7 @@ mod entity;
 use entity::PipeEntity;
 mod atlas;
 mod pipe;
+mod game_state;
 mod crab;
 mod audio;
 mod window;
@@ -22,82 +23,10 @@ use audio::Player;
 use std::time::Duration;
 use crate::crab::{PlayerEntity, create_player};
 use crate::tile::{TileEntity, create_tiles};
+use crate::game_state::GameState;
 
 pub const NUMBER_OF_TILES: u8 = 14;
-const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
-
-struct GameState {
-    /// Array of entities.
-    /// Drawn in order.
-    pipes: Vec<Box<PipeEntity>>,
-    tiles: Vec<Box<TileEntity>>,
-    player: Box<PlayerEntity>,
-    /// The sprite batch of all the images
-    sprite_batch: SpriteBatch,
-    /// The struct that moves the pipes around :)
-    /// Can use any function over time between 0 and 600/16
-    pipe_tracker: PipeTracker,
-    play_state: PlayState,
-    atlas: atlas::Atlas,
-    score: i128,
-    best_score: i128,
-    sound_player: audio::Player,
-}
-
-impl GameState {
-    /// Creates a new GameState
-    /// Panics if can't access the sprite image resource.
-    fn new(ctx: &mut Context, sprite_batch: SpriteBatch) -> Self {
-        let mut pipe_tracker = pipe::PipeTracker::new();
-        let sprites =
-            atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
-        let sound_player = Player::new(ctx);
-
-        Self {
-            pipes: GameState::create_start_entities(&sprites, &mut pipe_tracker),
-            player: create_player(&sprites),
-            tiles : create_tiles(&sprites),
-            sprite_batch,
-            pipe_tracker,
-            play_state: PlayState::StartScreen,
-            atlas: sprites,
-            score: 0,
-            best_score: 0,
-            sound_player
-        }
-    }
-
-    /// The last entity *must* be the player.
-    fn create_start_entities(
-        sprites: &atlas::Atlas,
-        pipe_tracker: &mut PipeTracker,
-    ) -> Vec<Box<PipeEntity>> {
-        let pipes = create_pipes(
-            sprites.create_sprite("pipe_bottom.png"),
-            sprites.create_sprite("pipe_top.png"),
-            pipe_tracker,
-            200.0,
-        );
-        pipes
-    }
-
-    fn restart(&mut self) {
-        self.sound_player.begin();
-        let mut pt = PipeTracker::new();
-        self.pipes = GameState::create_start_entities(&self.atlas, &mut pt);
-        self.player = create_player(&self.atlas);
-        self.pipe_tracker = pt;
-        self.play_state = PlayState::StartScreen;
-        self.swap_scores();
-        self.score = 0;
-    }
-
-    fn swap_scores(&mut self) {
-        if self.score > self.best_score {
-            self.best_score = self.score;
-        }
-    }
-}
+pub const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
 
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
@@ -185,19 +114,6 @@ fn create_batch_sprite(ctx: &mut Context) -> SpriteBatch {
     let mut batch = graphics::spritebatch::SpriteBatch::new(image);
     batch.set_filter(graphics::FilterMode::Nearest);
     batch
-}
-
-impl GameState {
-    fn handle_after_losing(&mut self, ctx: &mut Context, state: PlayState) {
-        match state {
-            PlayState::Dead { time } => {
-                if (ggez::timer::time_since_start(ctx) - time) > RESTART_AFTER {
-                    self.restart()
-                }
-            }
-            _ => {}
-        }
-    }
 }
 
 impl PlayState {
