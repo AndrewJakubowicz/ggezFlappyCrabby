@@ -17,8 +17,7 @@ use crate::pipe::{create_pipes, PipeTracker};
 use crate::{audio, atlas, pipe, RESTART_AFTER};
 
 pub struct GameState {
-    /// Array of entities.
-    /// Drawn in order.
+    pub tiles_drawn: bool,
     pub pipes: Vec<Box<PipeEntity>>,
     pub tiles: Vec<Box<TileEntity>>,
     pub player: Box<PlayerEntity>,
@@ -50,18 +49,19 @@ impl GameState {
     /// Panics if can't access the sprite image resource.
     pub fn new(ctx: &mut Context, sprite_batch: SpriteBatch) -> Self {
         let mut pipe_tracker = pipe::PipeTracker::new();
-        let sprites =
+        let atlas =
             atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
         let sound_player = Player::new(ctx);
 
         Self {
-            pipes: GameState::create_start_entities(&sprites, &mut pipe_tracker),
-            player: create_player(&sprites),
-            tiles : create_tiles(&sprites),
+            tiles_drawn: false,
+            pipes: GameState::create_start_entities(&atlas, &mut pipe_tracker),
+            player: create_player(&atlas),
+            tiles : create_tiles(&atlas),
             sprite_batch,
             pipe_tracker,
             play_state: PlayState::StartScreen,
-            atlas: sprites,
+            atlas,
             score: 0,
             best_score: 0,
             sound_player

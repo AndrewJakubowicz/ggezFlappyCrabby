@@ -39,7 +39,6 @@ impl EventHandler for GameState {
         for i in 0..self.pipes.len() {
             self.pipes[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
         }
-        // TODO: Another loop to check if player is dead.
         update_it(self, ctx);
         Ok(())
     }
@@ -48,8 +47,11 @@ impl EventHandler for GameState {
         graphics::clear(ctx, graphics::Color::from_rgb(112, 216, 255));
 
         self.player.draw(&mut self.sprite_batch)?;
-        for i in 0..self.tiles.len() {
-            self.tiles[i].draw(ctx, &mut self.sprite_batch);
+        if !self.tiles_drawn {
+            for i in 0..self.tiles.len() {
+                self.tiles[i].draw(ctx, &mut self.sprite_batch);
+            }
+            self.tiles_drawn = false;
         }
         for i in 0..self.pipes.len() {
             self.pipes[i].draw(ctx, &mut self.sprite_batch)?;
@@ -74,15 +76,12 @@ fn update_it(game: &mut GameState, ctx: &mut Context) {
     let pipes = &mut game.pipes;
     let tiles = &mut game.tiles;
 
-    // Check player against others.
-
     for i in 0..pipes.len() {
         if pipes[i].set_scored(&game.play_state) {
             game.score += 1;
             game.sound_player.score();
         }
-
-        // if hits a pipe  || hits ground
+        // if crab hits a pipe or hits ground
         if (player.overlaps(&pipes[i]) || hits_ground(player)) && game.play_state.is_playing() {
             game.sound_player.ouch();
             game.play_state.set_dead(ggez::timer::time_since_start(ctx));
