@@ -81,6 +81,7 @@ fn create_pipe_bottom(
         .collect::<Vec<Box<PipeEntity>>>();
 
     p.push(Box::new(pipe_tip));
+
     p
 }
 

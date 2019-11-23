@@ -6,6 +6,7 @@ use ggez::audio::SoundSource;
 use rand::distributions::OpenClosed01;
 use rand::{thread_rng, Rng};
 
+
 pub struct Player {
     pub score_sound: Source,
     pub ouch_sound: Source,
@@ -32,9 +33,11 @@ impl Player {
     pub fn ouch(&mut self){
         self.ouch_sound.play_detached();
     }
+
     pub fn score(&mut self) {
         let pitch: f32 = thread_rng().sample(OpenClosed01);
         self.score_sound.set_pitch(1.0 + pitch);
+
         self.score_sound.play_detached();
     }
 }
