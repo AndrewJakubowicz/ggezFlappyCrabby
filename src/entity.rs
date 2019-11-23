@@ -8,6 +8,7 @@ use ggez::GameResult;
 
 const DEBUG: bool = false;
 
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 /// The current state of the game.
 pub enum PlayState {
@@ -15,6 +16,7 @@ pub enum PlayState {
     Play,
     Dead { time: std::time::Duration },
 }
+
 
 struct Scroll {
     jump_distance: f32,
@@ -73,6 +75,7 @@ impl PipeEntity {
             return true;
         } else {
             return false;
+
         }
     }
 
@@ -159,4 +162,3 @@ impl PipeEntity {
         false
     }
 }
-

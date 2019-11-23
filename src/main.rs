@@ -28,6 +28,7 @@ use crate::game_state::GameState;
 pub const NUMBER_OF_TILES: u8 = 14;
 pub const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
 
+
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         let state = self.play_state.clone();
@@ -55,6 +56,7 @@ impl EventHandler for GameState {
         }
         for i in 0..self.pipes.len() {
             self.pipes[i].draw(ctx, &mut self.sprite_batch)?;
+
         }
 
         let p = graphics::DrawParam::new().scale(Vector2::new(4.0, 4.0));
@@ -143,4 +145,3 @@ fn draw_scores(score : i128, best_score: i128, ctx: &mut Context) {
         (Point2::new(10.0, 10.0), graphics::WHITE),
     );
 }
-
