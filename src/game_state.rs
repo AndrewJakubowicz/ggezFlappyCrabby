@@ -1,15 +1,8 @@
-use atlas::Sprite;
-use ggez::nalgebra::{Point2, Vector2};
 use ggez::{
-    event::EventHandler,
-    graphics::{spritebatch::SpriteBatch, Text},
+    graphics::{spritebatch::SpriteBatch},
     Context,
-    GameResult,
-    graphics,
-    event
 };
 use audio::Player;
-use std::time::Duration;
 use crate::crab::{PlayerEntity, create_player};
 use crate::tile::{TileEntity, create_tiles};
 use crate::entity::{PlayState, PipeEntity};

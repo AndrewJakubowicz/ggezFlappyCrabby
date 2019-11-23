@@ -1,10 +1,6 @@
 use crate::atlas::Sprite;
-use crate::pipe::{PipeTracker, pipe_velocity};
-use ggez::graphics;
 use ggez::graphics::spritebatch::SpriteBatch;
-use ggez::nalgebra::{Point2, Vector2};
-use ggez::Context;
-use ggez::GameResult;
+use ggez::nalgebra::{Point2};
 use crate::{NUMBER_OF_TILES, atlas};
 
 pub struct TileEntity {
@@ -13,7 +9,7 @@ pub struct TileEntity {
 }
 
 impl TileEntity {
-    pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) {
+    pub fn draw(&mut self, batch: &mut SpriteBatch) {
         let s = &mut self.sprite;
         batch.add(s.add_draw_param(self.position.clone()));
     }

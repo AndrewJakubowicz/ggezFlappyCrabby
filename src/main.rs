@@ -9,7 +9,6 @@ use ggez::{
     event
 };
 mod entity;
-use entity::PipeEntity;
 mod atlas;
 mod pipe;
 mod game_state;
@@ -18,11 +17,8 @@ mod audio;
 mod window;
 mod tile;
 use entity::PlayState;
-use pipe::{create_pipes, PipeTracker};
-use audio::Player;
 use std::time::Duration;
-use crate::crab::{PlayerEntity, create_player};
-use crate::tile::{TileEntity, create_tiles};
+use crate::crab::{PlayerEntity};
 use crate::game_state::GameState;
 
 pub const NUMBER_OF_TILES: u8 = 14;
@@ -38,7 +34,7 @@ impl EventHandler for GameState {
             self.play_state = PlayState::Play;
         }
         for i in 0..self.pipes.len() {
-            self.pipes[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
+            self.pipes[i].update(&mut self.pipe_tracker, &self.play_state);
         }
         update_it(self, ctx);
         Ok(())
@@ -50,7 +46,7 @@ impl EventHandler for GameState {
         self.player.draw(&mut self.sprite_batch)?;
         if !self.tiles_drawn {
             for i in 0..self.tiles.len() {
-                self.tiles[i].draw(ctx, &mut self.sprite_batch);
+                self.tiles[i].draw(&mut self.sprite_batch);
             }
             self.tiles_drawn = false;
         }
@@ -76,7 +72,6 @@ impl EventHandler for GameState {
 fn update_it(game: &mut GameState, ctx: &mut Context) {
     let player = &game.player;
     let pipes = &mut game.pipes;
-    let tiles = &mut game.tiles;
 
     for i in 0..pipes.len() {
         if pipes[i].set_scored(&game.play_state) {

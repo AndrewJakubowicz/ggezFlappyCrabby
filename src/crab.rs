@@ -1,4 +1,4 @@
-use crate::{atlas, entity};
+use crate::{atlas};
 use crate::entity::{PlayState, PipeEntity};
 use crate::atlas::Sprite;
 use ggez::nalgebra::{Point2, Vector2};

@@ -57,9 +57,7 @@ impl PipeEntity {
     }
 
     pub fn new_pipe(sprite: Sprite, x: f32, y: f32) -> Self {
-        let mut pipe = Self::new(sprite, (x, y));
-
-        pipe
+        Self::new(sprite, (x, y))
     }
 
     // Panics if there isn't a sprite.
@@ -105,7 +103,6 @@ impl PipeEntity {
 impl PipeEntity {
     pub fn update(
         &mut self,
-        ctx: &mut Context,
         pipe_tracker: &mut PipeTracker,
         state: &PlayState,
     ) {
