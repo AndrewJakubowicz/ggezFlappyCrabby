@@ -2,10 +2,12 @@ use atlas::Sprite;
 use ggez::nalgebra::{Point2, Vector2};
 use ggez::{
     audio::SoundSource,
-    conf::Conf,
     event::EventHandler,
-    graphics::{spritebatch::SpriteBatch, Drawable, Text},
-    *,
+    graphics::{spritebatch::SpriteBatch, Text},
+    Context,
+    GameResult,
+    graphics,
+    event
 };
 use rand::distributions::OpenClosed01;
 use rand::{thread_rng, Rng};
@@ -13,25 +15,32 @@ mod entity;
 use entity::Entity;
 mod atlas;
 mod pipe;
+mod crab;
+mod audio;
+mod window;
 use entity::{PlayState, ScoringPipe};
 use pipe::{create_pipes, PipeTracker};
+use audio::{Player};
+use std::time::Duration;
+use crab::create_player;
+
+const NUMBER_OF_TILES: u8 = 14;
+const RESTART_AFTER: Duration = std::time::Duration::from_secs(1);
 
 struct GameState {
     /// Array of entities.
     /// Drawn in order.
     entities: Vec<Entity>,
     /// The sprite batch of all the images
-    spritebatch: SpriteBatch,
+    sprite_batch: SpriteBatch,
     /// The struct that moves the pipes around :)
     /// Can use any function over time between 0 and 600/16
-    pt: PipeTracker,
+    pipe_tracker: PipeTracker,
     play_state: PlayState,
     atlas: atlas::Atlas,
     score: i128,
     best_score: i128,
-    score_sound: ggez::audio::Source,
-    ouch_sound: ggez::audio::Source,
-    begin_sound: ggez::audio::Source,
+    sound_player: audio::Player,
 }
 
 impl GameState {
@@ -41,23 +50,17 @@ impl GameState {
         let mut pipe_tracker = pipe::PipeTracker::new();
         let sprites =
             atlas::Atlas::parse_atlas_json(std::path::Path::new("resources/texture_atlas.json"));
-        let sound = audio::Source::new(ctx, "/score_point.wav").unwrap();
-        let ouch = audio::Source::new(ctx, "/ouch.wav").unwrap();
-        let mut begin_sound = audio::Source::new(ctx, "/begin_game.wav").unwrap();
-
-        begin_sound.play_detached();
+        let sound_player = Player::new(ctx);
 
         Self {
             entities: GameState::create_start_entities(&sprites, &mut pipe_tracker),
-            spritebatch,
-            pt: pipe_tracker,
+            sprite_batch: spritebatch,
+            pipe_tracker: pipe_tracker,
             play_state: PlayState::StartScreen,
             atlas: sprites,
             score: 0,
             best_score: 0,
-            score_sound: sound,
-            ouch_sound: ouch,
-            begin_sound: begin_sound,
+            sound_player: sound_player
         }
     }
 
@@ -66,10 +69,8 @@ impl GameState {
         sprites: &atlas::Atlas,
         pipe_tracker: &mut PipeTracker,
     ) -> Vec<Entity> {
-        let crab0 = sprites.create_sprite("crab0.png");
-        let crab1 = sprites.create_sprite("crab1.png");
         let floor_tile = sprites.create_sprite("floor_tile.png");
-        let player = create_player(crab0.clone(), vec![crab0, crab1]);
+        let player = create_player(sprites);
         let mut entities = create_tiles(floor_tile);
         let pipes = create_pipes(
             sprites.create_sprite("pipe_bottom.png"),
@@ -83,32 +84,28 @@ impl GameState {
     }
 
     fn restart(&mut self) {
-        self.begin_sound.play_detached();
+        self.sound_player.begin();
         let mut pt = PipeTracker::new();
-        let entities = GameState::create_start_entities(&self.atlas, &mut pt);
-        self.pt = pt;
-        self.entities = entities;
+        self.entities = GameState::create_start_entities(&self.atlas, &mut pt);
+        self.pipe_tracker = pt;
         self.play_state = PlayState::StartScreen;
+        self.swap_scores();
+        self.score = 0;
+    }
+
+    fn swap_scores(&mut self) {
         if self.score > self.best_score {
             self.best_score = self.score;
         }
-        self.score = 0;
     }
 }
 
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         let state = self.play_state.clone();
-        match state {
-            PlayState::Dead { time } => {
-                if (ggez::timer::time_since_start(ctx) - time) > std::time::Duration::from_secs(1) {
-                    self.restart()
-                }
-            }
-            _ => {}
-        }
+        self.handle_after_losing(ctx, state);
         for i in 0..self.entities.len() {
-            let (result, state) = self.entities[i].update(ctx, &mut self.pt, &self.play_state);
+            let (result, state) = self.entities[i].update(ctx, &mut self.pipe_tracker, &self.play_state);
             result?;
             if self.play_state != PlayState::Play && state == PlayState::Play {
                 self.play_state = PlayState::Play;
@@ -118,16 +115,18 @@ impl EventHandler for GameState {
         // TODO: Another loop to check if player is dead.
         {
             if let Some((player, other)) = self.entities.split_last_mut() {
+                /*
                 if player.position.y > 1000.0 {
                     if self.play_state == PlayState::Play {
                         if let Some(p) = &mut player.physics {
-                            p.vel.y = -100.0;
+                            p.velocity.y = -100.0;
                         }
                         self.play_state = PlayState::Dead {
                             time: ggez::timer::time_since_start(ctx),
                         };
                     }
                 }
+                */
                 // Check player against others.
                 let mut player_rect = player.get_bounds();
                 player_rect.move_to(player.position.clone());
@@ -139,12 +138,12 @@ impl EventHandler for GameState {
                                 scored = true;
                             }
                         }
-                        if scored && self.play_state == PlayState::Play {
+                        if scored && PlayState::is_playing(&self.play_state) {
                             other[i].scoring_pipe = Some(ScoringPipe::Scored);
                             self.score += 1;
                             let pitch: f32 = thread_rng().sample(OpenClosed01);
-                            self.score_sound.set_pitch(1.0 + pitch);
-                            self.score_sound.play_detached();
+                            self.sound_player.score_sound.set_pitch(1.0 + pitch);
+                            self.sound_player.score();
                         }
                     }
                     if other[i].sprite.is_none() {
@@ -152,42 +151,32 @@ impl EventHandler for GameState {
                     }
                     let mut other_rect = other[i].get_bounds();
                     other_rect.move_to(other[i].position.clone());
-                    if other_rect.overlaps(&player_rect) {
-                        if self.play_state == PlayState::Play {
-                            self.ouch_sound.play_detached();
-                            self.play_state = PlayState::Dead {
-                                time: ggez::timer::time_since_start(ctx),
-                            };
-                        }
+                    if other_rect.overlaps(&player_rect) && PlayState::is_playing(&self.play_state) {
+                        self.sound_player.ouch();
+                        self.play_state = PlayState::Dead {
+                            time: ggez::timer::time_since_start(ctx),
+                        };
                     }
                 }
             }
         }
         Ok(())
     }
+
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::Color::from_rgb(112, 216, 255));
 
         for i in 0..self.entities.len() {
-            self.entities[i].draw(ctx, &mut self.spritebatch)?;
+            self.entities[i].draw(ctx, &mut self.sprite_batch)?;
         }
 
         let p = graphics::DrawParam::new().scale(Vector2::new(4.0, 4.0));
         {
-            graphics::draw(ctx, &mut self.spritebatch, p);
-            self.spritebatch.clear();
+            graphics::draw(ctx, &mut self.sprite_batch, p);
+            self.sprite_batch.clear();
         }
 
-        let fps_display = Text::new(format!(
-            "Best Score: {}   Current Score: {}",
-            self.best_score, self.score
-        ));
-
-        graphics::draw(
-            ctx,
-            &fps_display,
-            (Point2::new(10.0, 10.0), graphics::WHITE),
-        )?;
+        draw_scores(self.score, self.best_score, ctx);
 
         graphics::present(ctx)?;
         std::thread::yield_now();
@@ -195,38 +184,27 @@ impl EventHandler for GameState {
     }
 }
 
+
 fn main() {
-    use ggez::conf::*;
     let resource_dir = std::path::PathBuf::from("./resources");
 
-    let cb = ggez::ContextBuilder::new("FlappyCrab", "youCodeThings")
-        .add_resource_path(resource_dir)
-        .window_setup(
-            WindowSetup::default()
-                .title("Flappy Crab (/)(;,,;)(/)!!!")
-                .samples(NumSamples::Zero)
-                .vsync(true),
-        )
-        .window_mode(WindowMode::default().dimensions(800.0, 600.0));
+    let cb = window::build_window(resource_dir);
 
     let (ctx, event_loop) = &mut cb.build().expect("Failed to build ggez!");
 
-    let image = graphics::Image::new(ctx, "/texture_atlas.png").unwrap();
-    let mut batch = graphics::spritebatch::SpriteBatch::new(image);
-    batch.set_filter(graphics::FilterMode::Nearest);
+    let batch = create_batch_sprite(ctx);
 
     let mut state = GameState::new(ctx, batch);
 
+    state.sound_player.begin();
     event::run(ctx, event_loop, &mut state).unwrap();
 }
 
-fn create_player(sprite: Sprite, player_sprites: Vec<Sprite>) -> Entity {
-    let mut player = entity::Entity::new().add_physics(true);
-    player.sprite = Some(sprite);
-    player.is_player = true;
-    player.position = Point2::new(40.0, -16.0);
-    player.player_sprites = Some(player_sprites);
-    player
+fn create_batch_sprite(ctx: &mut Context) -> SpriteBatch {
+    let image = graphics::Image::new(ctx, "/texture_atlas.png").unwrap();
+    let mut batch = graphics::spritebatch::SpriteBatch::new(image);
+    batch.set_filter(graphics::FilterMode::Nearest);
+    batch
 }
 
 fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Entity {
@@ -238,11 +216,43 @@ fn create_tile_scroll(sprite: Sprite, x: f32, jump: f32) -> Entity {
 }
 
 fn create_tiles(sprite: Sprite) -> Vec<Entity> {
-    let number_of_tiles = 14;
     let width = sprite.width;
-    let total_dist = width * (number_of_tiles as f32);
-    (0..number_of_tiles)
+    let total_dist = width * (NUMBER_OF_TILES as f32);
+    (0..NUMBER_OF_TILES)
         .into_iter()
-        .map(|i| create_tile_scroll(sprite.clone(), (i as f32) * (width as f32), total_dist))
+        .map(|i| create_tile_scroll(sprite.clone(), (i as f32) * width, total_dist))
         .collect()
 }
+
+impl GameState {
+    fn handle_after_losing(&mut self, ctx: &mut Context, state: PlayState) {
+        match state {
+            PlayState::Dead { time } => {
+                if (ggez::timer::time_since_start(ctx) - time) > RESTART_AFTER {
+                    self.restart()
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+impl PlayState {
+    fn is_playing(play_state : &PlayState) -> bool {
+        *play_state == PlayState::Play
+    }
+}
+
+fn draw_scores(score : i128, best_score: i128, ctx: &mut Context) {
+    let fps_display = Text::new(format!(
+        "Best Score: {}   Current Score: {}",
+        best_score, score
+    ));
+
+    graphics::draw(
+        ctx,
+        &fps_display,
+        (Point2::new(10.0, 10.0), graphics::WHITE),
+    );
+}
+

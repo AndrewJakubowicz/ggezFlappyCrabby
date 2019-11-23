@@ -1,8 +1,6 @@
-use ggez::graphics::{self, spritebatch::SpriteBatch};
+use ggez::graphics::{self};
 use ggez::nalgebra::{Point2, Vector2};
-use serde::{Deserialize, Serialize};
-use serde_json::{Result, Value};
-use std::cell::RefCell;
+use serde::{Deserialize};
 use std::path::Path;
 
 #[derive(Deserialize, Debug)]
@@ -42,7 +40,7 @@ impl Atlas {
         use std::io::BufReader;
 
         let file = File::open(texture_atlas_file).expect("Couldn't find the texture_atlas file");
-        let mut buf_reader = std::io::BufReader::new(file);
+        let buf_reader = BufReader::new(file);
         serde_json::from_reader(buf_reader).expect("Couldn't create texture atlas")
     }
 
@@ -102,7 +100,7 @@ impl Sprite {
     }
 
     /// Returns the bounding box for this sprite.
-    pub fn aabb(&self) -> graphics::Rect {
+    pub fn get_bound_box(&self) -> graphics::Rect {
         let mut r = graphics::Rect::new(0.0, 0.0, self.width, self.height);
         r.scale(self.scale.x, self.scale.y);
         r

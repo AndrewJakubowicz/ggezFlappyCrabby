@@ -1,9 +1,7 @@
 use crate::atlas::Sprite;
 use crate::pipe::PipeTracker;
-use ggez::event::EventHandler;
 use ggez::graphics;
 use ggez::graphics::spritebatch::SpriteBatch;
-use ggez::graphics::Image;
 use ggez::nalgebra::{Point2, Vector2};
 use ggez::Context;
 use ggez::GameResult;
@@ -12,6 +10,7 @@ const DEBUG: bool = false;
 
 const GRAVITY: f32 = 0.28;
 const JUMP_IMPULSE: f32 = 2.75;
+pub const SCREEN_TOP: f32 = -16.0;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 /// The current state of the game.
@@ -23,8 +22,8 @@ pub enum PlayState {
 
 /// The physics on the entity.
 pub struct Physics {
-    pub vel: Vector2<f32>,
-    acc: Vector2<f32>,
+    pub velocity: Vector2<f32>,
+    acceleration: Vector2<f32>,
     gravity: bool,
 }
 
@@ -68,8 +67,8 @@ impl Entity {
     }
     pub fn add_physics(mut self, with_gravity: bool) -> Self {
         self.physics = Some(Physics {
-            vel: Vector2::new(0.0, 0.0),
-            acc: Vector2::new(0.0, 0.0),
+            velocity: Vector2::new(0.0, 0.0),
+            acceleration: Vector2::new(0.0, 0.0),
             gravity: with_gravity,
         });
         self
@@ -78,7 +77,7 @@ impl Entity {
     // Panics if there isn't a sprite.
     pub fn get_bounds(&self) -> graphics::Rect {
         match &self.sprite {
-            Some(sprite) => sprite.aabb(),
+            Some(sprite) => sprite.get_bound_box(),
             None => unimplemented!("This is not implemented"),
         }
     }
@@ -92,7 +91,7 @@ impl Entity {
 
     pub fn set_velocity(mut self, vel: Vector2<f32>) -> Self {
         if let Some(p) = &mut self.physics {
-            p.vel = vel;
+            p.velocity = vel;
         }
         self
     }
@@ -102,14 +101,14 @@ impl Entity {
     pub fn update(
         &mut self,
         ctx: &mut Context,
-        pt: &mut PipeTracker,
+        pipe_tracker: &mut PipeTracker,
         state: &PlayState,
     ) -> (GameResult, PlayState) {
         let delta = ggez::timer::delta(ctx).as_nanos() as f32;
         let mut state = state.clone();
 
         if let Some(physics) = &mut self.physics {
-            physics.acc = if physics.gravity {
+            physics.acceleration = if physics.gravity {
                 Vector2::new(0.0, GRAVITY)
             } else {
                 Vector2::new(0.0, 0.0)
@@ -128,8 +127,7 @@ impl Entity {
 
             if keyboard::is_key_pressed(ctx, KeyCode::Space) && self.can_jump {
                 if let Some(physics) = &mut self.physics {
-                    physics.acc = Vector2::new(0.0, -GRAVITY);
-                    physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
+                    Entity::jump(physics);
                 }
                 if state == PlayState::StartScreen {
                     state = PlayState::Play;
@@ -140,51 +138,60 @@ impl Entity {
 
         // Self jumping script on the start screen.
         if self.is_player && self.physics.is_some() && state == PlayState::StartScreen {
-            if let Some(physics) = &mut self.physics {
-                if self.position.y > 600.0 / 8.0 {
-                    physics.acc = Vector2::new(0.0, -GRAVITY);
-                    physics.vel = Vector2::new(0.0, -JUMP_IMPULSE);
-                }
-            }
+            self.auto_jump()
         }
 
         if let Some(physics) = &mut self.physics {
             if !(PlayState::StartScreen == state && self.is_pipe) {
-                physics.acc.scale(1.0 / delta);
+                physics.acceleration.scale(1.0 / delta);
 
-                physics.vel += physics.acc;
-                physics.vel.scale(1.0 / delta);
-                self.position += physics.vel;
+                physics.velocity += physics.acceleration;
+                physics.velocity.scale(1.0 / delta);
+                self.position += physics.velocity;
 
                 // prevent falling off the left side of the screen.
-                if let Some(scroll) = &self.scroller {
-                    if let Some(sprite) = &self.sprite {
-                        let right_pos = sprite.width + self.position.x;
-                        if right_pos < 0.0 {
-                            if self.is_pipe {
-                                let diff = pt.get_pipe_difference();
-                                self.position.y += diff;
-                            }
-                            if self.scoring_pipe.is_some() {
-                                self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
-                            }
-                            self.position.x += scroll.jump_distance;
-                        }
-                    }
-                }
+                self.prevent_falling_off_left(pipe_tracker)
             }
 
             if self.is_player {
                 // clamp y to not go above the top of the screen easily.
-                self.position.y = if self.position.y < -16.0 {
-                    -16.0
-                } else {
-                    self.position.y
-                }
+                self.prevent_going_off();
             }
         }
 
         (Ok(()), state)
+    }
+
+    fn prevent_going_off(&mut self) -> () {
+        self.position.y = if self.position.y < SCREEN_TOP {
+            SCREEN_TOP
+        } else {
+            self.position.y
+        }
+    }
+
+    fn jump(physics: &mut Physics) {
+        physics.acceleration = Vector2::new(0.0, -GRAVITY);
+        physics.velocity = Vector2::new(0.0, -JUMP_IMPULSE);
+    }
+
+    fn prevent_falling_off_left(&mut self, pipe_tracker: &mut PipeTracker) {
+        if self.scroller.as_ref().is_none() || self.sprite.as_ref().is_none() {
+            return ;
+        }
+        let scroll = self.scroller.as_ref().unwrap();
+        let sprite = self.sprite.as_ref().unwrap();
+        let right_pos = sprite.width + self.position.x;
+        if right_pos >= 0.0 {
+            return ;
+        }
+        if self.is_pipe {
+            self.position.y += pipe_tracker.get_pipe_difference();
+        }
+        if self.scoring_pipe.is_some() {
+            self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+        }
+        self.position.x += scroll.jump_distance;
     }
 
     pub fn draw(&mut self, ctx: &mut Context, batch: &mut SpriteBatch) -> GameResult {
@@ -192,27 +199,24 @@ impl Entity {
             if let Some(s) = &mut self.player_sprites {
                 if let Some(p) = &self.physics {
                     // need velocity to map to these rotations between -0.2 and 0.2!
-                    let angle = rescale_range(p.vel.y, -7.0, 7.0, -0.6, 0.6);
-                    if p.vel.y < 0.0 {
-                        batch.add(
-                            s[0].add_draw_param(self.position.clone())
-                                .offset(Point2::new(0.5, 0.5))
-                                .rotation(angle),
-                        );
+                    let angle = rescale_range(p.velocity.y, -7.0, 7.0, -0.6, 0.6);
+                    let mut x = if p.velocity.y < 0.0 {
+                        &mut s[0]
                     } else {
-                        batch.add(
-                            s[1].add_draw_param(self.position.clone())
-                                .offset(Point2::new(0.5, 0.5))
-                                .rotation(angle),
-                        );
-                    }
+                        &mut s[1]
+                    };
+                    batch.add(
+                        x.add_draw_param(self.position.clone())
+                            .offset(Point2::new(0.5, 0.5))
+                            .rotation(angle),
+                    );
                 }
             }
         } else {
             if let Some(s) = &mut self.sprite {
                 batch.add(s.add_draw_param(self.position.clone()));
                 if DEBUG {
-                    let mut rect = s.aabb();
+                    let rect = s.get_bound_box();
                     let mesh = graphics::Mesh::new_rectangle(
                         ctx,
                         graphics::DrawMode::stroke(1.0),
@@ -228,13 +232,21 @@ impl Entity {
         }
         Ok(())
     }
+
+    fn auto_jump(&mut self) -> () {
+        if let Some(physics) = &mut self.physics {
+            if self.position.y > 600.0 / 8.0 {
+                Entity::jump(physics);
+            }
+        }
+    }
 }
 
 /// Returns an f32 scaled [oldMin, oldMax] into the range [newMin, newMax]
 /// Thanks https://stackoverflow.com/a/5295202/6421793
-fn rescale_range(value: f32, oldMin: f32, oldMax: f32, newMin: f32, newMax: f32) -> f32 {
+fn rescale_range(value: f32, old_min: f32, old_max: f32, new_min: f32, new_max: f32) -> f32 {
     use ggez::nalgebra::clamp;
-    let old_range = oldMax - oldMin;
-    let new_range = newMax - newMin;
-    (((clamp(value, oldMin, oldMax) - oldMin) * new_range) / old_range) + newMin
+    let old_range = old_max - old_min;
+    let new_range = new_max - new_min;
+    (((clamp(value, old_min, old_max) - old_min) * new_range) / old_range) + new_min
 }
