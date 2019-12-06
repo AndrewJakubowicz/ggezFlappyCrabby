@@ -18,7 +18,7 @@ mod window;
 mod tile;
 use entity::PlayState;
 use std::time::Duration;
-use crate::crab::{PlayerEntity};
+use crate::crab::PlayerEntity;
 use crate::game_state::GameState;
 
 pub const NUMBER_OF_TILES: u8 = 14;
@@ -37,6 +37,7 @@ impl EventHandler for GameState {
             self.pipes[i].update(&mut self.pipe_tracker, &self.play_state);
         }
         update_it(self, ctx);
+
         Ok(())
     }
 
@@ -65,6 +66,7 @@ impl EventHandler for GameState {
 
         graphics::present(ctx)?;
         std::thread::yield_now();
+
         Ok(())
     }
 }

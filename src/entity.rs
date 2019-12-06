@@ -71,11 +71,7 @@ impl PipeEntity {
     }
 
     pub fn is_ready_to_score(&self) -> bool {
-        if ScoringPipe::ReadyToScore == self.scoring_pipe {
-            return true;
-        } else {
-            return false;
-        }
+        ScoringPipe::ReadyToScore == self.scoring_pipe
     }
 
 
@@ -87,11 +83,15 @@ impl PipeEntity {
 
         self.position.y += pipe_tracker.get_pipe_difference();
 
+        self.resetScoredPipes();
+        let scroll = &self.scroller;
+        self.position.x += scroll.jump_distance;
+    }
+
+    fn resetScoredPipes(&mut self) {
         if self.scoring_pipe == ScoringPipe::Scored {
             self.scoring_pipe = ScoringPipe::ReadyToScore;
         }
-        let scroll = &self.scroller;
-        self.position.x += scroll.jump_distance;
     }
 }
 
@@ -147,8 +147,7 @@ impl PipeEntity {
             return false;
         }
 
-        if  self.is_ready_to_score() && PlayState::is_playing(&play_state) {
-            println!("{}", self.position.x);
+        if self.is_ready_to_score() && PlayState::is_playing(&play_state) {
             self.scoring_pipe = ScoringPipe::Scored;
 
             return true;
