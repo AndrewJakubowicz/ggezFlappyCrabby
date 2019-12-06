@@ -110,7 +110,7 @@ impl PlayerEntity {
     }
     pub fn overlaps(&self, other : &PipeEntity) -> bool {
         let player_rect = self.get_bounds();
-        let other_rect = other.get_bounds();
+        let other_rect = other.get_rect();
 
         other_rect.overlaps(&player_rect)
     }

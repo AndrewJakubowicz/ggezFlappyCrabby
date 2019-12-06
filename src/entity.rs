@@ -18,12 +18,13 @@ pub enum PlayState {
 }
 
 
-struct Scroll {
+pub struct Scroll {
     jump_distance: f32,
 }
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum ScoringPipe {
+    Dormant,
     ReadyToScore,
     Scored,
 }
@@ -31,8 +32,8 @@ pub enum ScoringPipe {
 pub struct PipeEntity {
     pub sprite: Sprite,
     pub position: Point2<f32>,
-    scroller: Option<Scroll>,
-    pub scoring_pipe: Option<ScoringPipe>,
+    pub scroller: Scroll,
+    pub scoring_pipe: ScoringPipe,
 }
 
 /// Everything that can be interacted with is an entity.
@@ -47,42 +48,36 @@ pub trait GameEntity {
 /// Everything that can be interacted with is an entity.
 /// The player is an entity, as well as the pipes.
 impl PipeEntity {
-    pub fn new(sprite: Sprite, position: (f32, f32)) -> Self {
+    pub fn new(sprite: Sprite, position: (f32, f32), scroller : f32) -> Self {
+
         Self {
             sprite,
             position: Point2::new(position.0, position.1),
-            scroller: None,
-            scoring_pipe: None,
+            scroller: Scroll { jump_distance: scroller },
+            scoring_pipe: ScoringPipe::Dormant,
         }
     }
 
-    pub fn new_pipe(sprite: Sprite, x: f32, y: f32) -> Self {
-        Self::new(sprite, (x, y))
+    pub fn new_pipe(sprite: Sprite, x: f32, y: f32, scroll : f32) -> Self {
+        Self::new(sprite, (x, y), scroll)
     }
 
     // Panics if there isn't a sprite.
-    pub fn get_bounds(&self) -> graphics::Rect {
+    pub fn get_rect(&self) -> graphics::Rect {
         let mut rect = self.sprite.get_bound_box();
         rect.move_to(self.position.clone());
 
         rect
     }
 
-    pub fn get_scored (&self) -> bool {
-        if let Some(ScoringPipe::ReadyToScore) = self.scoring_pipe {
+    pub fn is_ready_to_score(&self) -> bool {
+        if ScoringPipe::ReadyToScore == self.scoring_pipe {
             return true;
         } else {
             return false;
-
         }
     }
 
-    pub fn scroller(mut self, dist: f32) -> Self {
-        self.scroller = Some(Scroll {
-            jump_distance: dist,
-        });
-        self
-    }
 
     fn recycle_passed_pipes(&mut self, pipe_tracker: &mut PipeTracker) {
         let right_pos = &self.sprite.width + self.position.x;
@@ -92,10 +87,10 @@ impl PipeEntity {
 
         self.position.y += pipe_tracker.get_pipe_difference();
 
-        if self.scoring_pipe.is_some() {
-            self.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+        if self.scoring_pipe == ScoringPipe::Scored {
+            self.scoring_pipe = ScoringPipe::ReadyToScore;
         }
-        let scroll = self.scroller.as_ref().unwrap();
+        let scroll = &self.scroller;
         self.position.x += scroll.jump_distance;
     }
 }
@@ -148,14 +143,17 @@ impl PipeEntity {
     }
 
     pub fn set_scored(&mut self, play_state : &PlayState) -> bool {
-        if self.position.x >= 20.0 {
+        if self.position.x  > 20.0 {
             return false;
         }
 
-        if  self.get_scored() && PlayState::is_playing(&play_state) {
-            self.scoring_pipe = Some(ScoringPipe::Scored);
+        if  self.is_ready_to_score() && PlayState::is_playing(&play_state) {
+            println!("{}", self.position.x);
+            self.scoring_pipe = ScoringPipe::Scored;
+
             return true;
         }
+
         false
     }
 }

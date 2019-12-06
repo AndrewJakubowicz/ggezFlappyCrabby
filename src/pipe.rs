@@ -1,4 +1,4 @@
-use crate::entity::{PipeEntity};
+use crate::entity::{PipeEntity, Scroll};
 use crate::Sprite;
 use noise::NoiseFn;
 use noise::Perlin;
@@ -73,7 +73,7 @@ fn create_pipe_bottom(
 ) -> Vec<Box<PipeEntity>> {
     let top_height = sprite_top.height;
 
-    let pipe_tip = create_pipe_tip(sprite_top, x, top).scroller(total_dist);
+    let pipe_tip = create_pipe_tip(sprite_top, x, top, total_dist);
     let segments = SEGMENTS;
     let mut p = (0..segments)
         .into_iter()
@@ -134,8 +134,9 @@ fn create_pipe_top(
     let mut sprite_top = sprite_top;
     sprite_top.scale.y = -1.0;
 
-    let mut pipe_tip = create_pipe_tip(sprite_top, x, top).scroller(total_dist);
-    pipe_tip.scoring_pipe = Some(ScoringPipe::ReadyToScore);
+    let mut pipe_tip = create_pipe_tip(sprite_top, x, top, total_dist);
+
+    pipe_tip.scoring_pipe = ScoringPipe::ReadyToScore;
 
     let segments = SEGMENTS;
     let mut p = (0..segments)
@@ -155,12 +156,11 @@ pub fn pipe_velocity() -> f32 {
 
 fn make_pipe_body(sprite_base: &Sprite, x: f32, top: f32, total_dist: f32, top_height: f32, i: f32) -> Box<PipeEntity> {
     let top = top + top_height + (sprite_base.height * i);
-    let mut pipe_body = PipeEntity::new_pipe(sprite_base.clone(), x, top);
-    pipe_body = pipe_body.scroller(total_dist);
+    let mut pipe_body = PipeEntity::new_pipe(sprite_base.clone(), x, top, total_dist);
 
     Box::new(pipe_body)
 }
 
-fn create_pipe_tip(sprite_top: Sprite, x: f32, top: f32) -> PipeEntity {
-    PipeEntity::new_pipe(sprite_top, x, top)
+fn create_pipe_tip(sprite_top: Sprite, x: f32, top: f32, scroll : f32) -> PipeEntity {
+    PipeEntity::new_pipe(sprite_top, x, top, scroll)
 }

@@ -72,10 +72,10 @@ impl EventHandler for GameState {
 fn update_it(game: &mut GameState, ctx: &mut Context) {
     let player = &game.player;
     let pipes = &mut game.pipes;
-
     for i in 0..pipes.len() {
         if pipes[i].set_scored(&game.play_state) {
             game.score += 1;
+            println!("{}", i);
             game.sound_player.score();
         }
         // if crab hits a pipe or hits ground
